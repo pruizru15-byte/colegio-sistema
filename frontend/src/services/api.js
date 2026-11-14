@@ -56,8 +56,18 @@ export const getEquiposApi = async (params = {}) => {
   return res.data;
 };
 
+export const getEquiposStatsApi = async () => {
+  const res = await api.get('/equipos/stats');
+  return res.data;
+};
+
 export const getEquipoByIdApi = async (id) => {
   const res = await api.get(`/equipos/${id}`);
+  return res.data;
+};
+
+export const getEquipoHistorialApi = async (id) => {
+  const res = await api.get(`/equipos/${id}/historial`);
   return res.data;
 };
 

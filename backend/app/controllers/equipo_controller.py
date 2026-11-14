@@ -100,6 +100,114 @@ def consultar_inventario(
     return query.order_by(EquipoModel.id.desc()).all()
 
 
+@router.get("/equipos/stats")
+def estadisticas_equipos(
+    db: Session = Depends(get_db),
+    user: UsuarioModel = Depends(get_current_user)
+):
+    """
+    Retorna métricas consolidadas del parque de equipos escolares.
+    """
+    total = db.query(EquipoModel).count()
+    operativos = db.query(EquipoModel).filter(EquipoModel.estado == "operativo").count()
+    mantenimiento = db.query(EquipoModel).filter(EquipoModel.estado == "mantenimiento").count()
+    de_baja = db.query(EquipoModel).filter(EquipoModel.estado.in_(["de_baja", "desuso"])).count()
+    prestados = db.query(EquipoModel).filter(EquipoModel.estado == "prestado").count()
+    en_reserva = db.query(EquipoModel).filter(EquipoModel.estado == "en_reserva").count()
+
+    from sqlalchemy import func
+    tipos_raw = db.query(EquipoModel.tipo, func.count(EquipoModel.id)).group_by(EquipoModel.tipo).all()
+    tipos = [{"tipo": t or "Otro", "cantidad": c} for t, c in tipos_raw]
+
+    ubics_raw = db.query(UbicacionModel.nombre, func.count(EquipoModel.id))\
+        .outerjoin(EquipoModel, EquipoModel.ubicacion_id == UbicacionModel.id)\
+        .group_by(UbicacionModel.nombre).all()
+    ubicaciones = [{"ubicacion": u or "Sin Asignar", "cantidad": c} for u, c in ubics_raw]
+
+    return {
+        "total": total,
+        "operativos": operativos,
+        "mantenimiento": mantenimiento,
+        "de_baja": de_baja,
+        "prestados": prestados,
+        "en_reserva": en_reserva,
+        "tipos": tipos,
+        "ubicaciones": ubicaciones
+    }
+
+
+@router.get("/equipos/{equipo_id}/historial")
+def historial_equipo(
+    equipo_id: int, 
+    db: Session = Depends(get_db),
+    user: UsuarioModel = Depends(get_current_user)
+):
+    """
+    Retorna la Hoja de Vida integral del equipo: especificaciones,
+    código QR, órdenes de mantenimiento y registros de préstamo.
+    """
+    equipo = db.query(EquipoModel).filter(EquipoModel.id == equipo_id).first()
+    if not equipo:
+        raise HTTPException(status_code=404, detail="Equipo no encontrado")
+
+    mantenimientos = [
+        {
+            "id": m.id,
+            "codigo_orden": m.codigo_orden,
+            "tipo": m.tipo,
+            "prioridad": m.prioridad,
+            "estado": m.estado,
+            "fecha_programada": str(m.fecha_programada),
+            "fecha_completada": str(m.fecha_completada) if m.fecha_completada else None,
+            "tecnico_responsable": m.tecnico_responsable,
+            "costo_estimado": m.costo_estimado,
+            "descripcion_problema": m.descripcion_problema,
+            "diagnostico_solucion": m.diagnostico_solucion,
+        }
+        for m in sorted(equipo.mantenimientos, key=lambda x: x.id, reverse=True)
+    ]
+
+    prestamos = [
+        {
+            "id": p.id,
+            "codigo_prestamo": p.codigo_prestamo,
+            "usuario_nombre": p.usuario.nombre if p.usuario else "Docente / Alumno",
+            "ubicacion_nombre": p.ubicacion.nombre if p.ubicacion else "Ubicación Escolar",
+            "fecha_prestamo": p.fecha_prestamo.isoformat() if p.fecha_prestamo else None,
+            "fecha_devolucion_esperada": str(p.fecha_devolucion_esperada) if p.fecha_devolucion_esperada else None,
+            "fecha_devolucion_real": p.fecha_devolucion_real.isoformat() if p.fecha_devolucion_real else None,
+            "estado": p.estado,
+            "motivo": p.motivo,
+        }
+        for p in sorted(equipo.prestamos, key=lambda x: x.id, reverse=True)
+    ]
+
+    return {
+        "id": equipo.id,
+        "codigo_patrimonial": equipo.codigo_patrimonial,
+        "nombre": equipo.nombre,
+        "tipo": equipo.tipo,
+        "marca": equipo.marca,
+        "modelo": equipo.modelo,
+        "numero_serie": equipo.numero_serie,
+        "estado": equipo.estado,
+        "observaciones": equipo.observaciones,
+        "created_at": equipo.created_at.isoformat() if equipo.created_at else None,
+        "ubicacion": {
+            "id": equipo.ubicacion.id,
+            "nombre": equipo.ubicacion.nombre,
+            "pabellon": equipo.ubicacion.pabellon,
+            "piso": equipo.ubicacion.piso,
+        } if equipo.ubicacion else None,
+        "codigo_qr": {
+            "codigo_hash": equipo.codigo_qr.codigo_hash,
+            "url_destino": equipo.codigo_qr.url_destino,
+        } if equipo.codigo_qr else None,
+        "mantenimientos": mantenimientos,
+        "prestamos": prestamos
+    }
+
+
 @router.get("/equipos/{equipo_id}", response_model=EquipoResponse)
 def detalle_equipo(equipo_id: int, db: Session = Depends(get_db)):
     equipo = db.query(EquipoModel).filter(EquipoModel.id == equipo_id).first()
@@ -113,12 +221,18 @@ def actualizar_datos_equipo(
     equipo_id: int,
     equipo_update: EquipoUpdate,
     db: Session = Depends(get_db),
-    admin: UsuarioModel = Depends(require_admin)
+    current_user: UsuarioModel = Depends(get_current_user)
 ):
     """
     5. Actualizar datos del equipo (Diagrama de secuencia):
     Edita estado, ubicación u observaciones técnicas.
     """
+    if current_user.rol.lower() not in ["administrador", "admin", "tecnico", "docente"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar información de equipos."
+        )
+
     equipo = db.query(EquipoModel).filter(EquipoModel.id == equipo_id).first()
     if not equipo:
         raise HTTPException(status_code=404, detail="Equipo no encontrado")
