@@ -40,6 +40,16 @@ export const getMeApi = async () => {
   return res.data;
 };
 
+export const updatePerfilApi = async (data) => {
+  const res = await api.put('/auth/perfil', data);
+  return res.data;
+};
+
+export const cambiarPasswordApi = async (data) => {
+  const res = await api.put('/auth/cambiar-password', data);
+  return res.data;
+};
+
 // Equipos
 export const getEquiposApi = async (params = {}) => {
   const res = await api.get('/equipos', { params });

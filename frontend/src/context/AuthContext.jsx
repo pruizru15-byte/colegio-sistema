@@ -52,10 +52,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (newUserData) => {
+    setUser(newUserData);
+  };
+
   const isAdmin = user?.rol?.toLowerCase() === 'administrador';
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

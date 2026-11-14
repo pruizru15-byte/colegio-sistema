@@ -13,9 +13,10 @@
 // limitations under the License.
 
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Laptop, Search, Bell, Sun, Moon, LaptopMinimal, 
-  ChevronDown, Check, User 
+  ChevronDown, Check, User, LogOut, Settings, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -23,12 +24,14 @@ import { NotificationModal } from './NotificationModal';
 import { SearchModal } from './SearchModal';
 
 export const TopHeader = ({ notifications = [] }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const themeOptions = [
     { id: 'claro', label: 'Claro', icon: Sun },
@@ -125,19 +128,74 @@ export const TopHeader = ({ notifications = [] }) => {
             )}
           </div>
 
-          {/* Perfil de Usuario (Estudiante UCV / Administrador) */}
-          <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-            <div className="w-9 h-9 rounded-full bg-indigo-100 border-2 border-indigo-200 flex items-center justify-center text-indigo-700 font-bold overflow-hidden shadow-inner">
-              <span className="text-xs">UCV</span>
-            </div>
-            <div className="hidden sm:flex flex-col text-left leading-tight">
-              <span className="text-xs font-bold text-slate-800">
-                {user?.nombre || 'Estudiante UCV'}
-              </span>
-              <span className="text-[10px] text-slate-400 font-semibold capitalize">
-                {user?.rol || 'Administrador'}
-              </span>
-            </div>
+          {/* Perfil de Usuario con Menú Desplegable */}
+          <div className="relative pl-2 border-l border-slate-200">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 transition text-left cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                {(user?.nombre || 'AD').substring(0, 2).toUpperCase()}
+              </div>
+              <div className="hidden sm:flex flex-col leading-tight">
+                <span className="text-xs font-bold text-slate-800">
+                  {user?.nombre || 'Estudiante UCV'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-semibold capitalize">
+                  {user?.rol || 'Administrador'}
+                </span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
+            </button>
+
+            {/* Menú Desplegable del Usuario */}
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 z-50 animate-fade-in text-xs">
+                <div className="px-4 py-2.5 border-b border-slate-100">
+                  <div className="font-bold text-slate-900 truncate">{user?.nombre}</div>
+                  <div className="text-[11px] text-slate-400 truncate">{user?.email}</div>
+                  <div className="mt-1.5">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-700 capitalize">
+                      {user?.rol}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="py-1">
+                  <Link
+                    to="/perfil"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 transition font-medium"
+                  >
+                    <User className="w-4 h-4 text-slate-400" />
+                    <span>Mi Perfil & Seguridad</span>
+                  </Link>
+
+                  <Link
+                    to="/inventario"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 transition font-medium"
+                  >
+                    <Laptop className="w-4 h-4 text-slate-400" />
+                    <span>Inventario de Equipos</span>
+                  </Link>
+                </div>
+
+                <div className="pt-1 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      logout();
+                      navigate('/login');
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition font-medium text-left"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Cerrar Sesión</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

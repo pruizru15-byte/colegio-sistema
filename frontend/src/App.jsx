@@ -24,6 +24,7 @@ import { Login } from './pages/Login';
 import { Inventario } from './pages/Inventario';
 import { NuevoEquipo } from './pages/NuevoEquipo';
 import { Usuarios } from './pages/Usuarios';
+import { Perfil } from './pages/Perfil';
 import { FichaPublicaQR } from './pages/FichaPublicaQR';
 import { EscanerQR } from './pages/EscanerQR';
 
@@ -108,6 +109,14 @@ export default function App() {
                   <AdminRoute>
                     <Usuarios />
                   </AdminRoute>
+                }
+              />
+              <Route
+                path="/perfil"
+                element={
+                  <ProtectedRoute>
+                    <Perfil />
+                  </ProtectedRoute>
                 }
               />
               <Route

@@ -30,7 +30,7 @@ export const Sidebar = () => {
     { label: 'Códigos QR', path: '/escaner', icon: QrCode },
     { label: 'Mantenimientos', path: '/inventario', icon: Wrench },
     { label: 'Reportes', path: '/inventario', icon: BarChart3 },
-    { label: 'Configuración', path: '/inventario', icon: Settings },
+    { label: 'Configuración', path: '/perfil', icon: Settings },
   ];
 
   const isCurrentActive = (itemPath) => {

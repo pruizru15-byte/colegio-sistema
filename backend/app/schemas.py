@@ -42,6 +42,14 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class PerfilUpdateRequest(BaseModel):
+    nombre: str
+    email: EmailStr
+
+class CambiarPasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
