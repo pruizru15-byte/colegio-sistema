@@ -18,6 +18,7 @@ services:
     image: mysql:8.0
     container_name: colegio_db
     restart: always
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secure_pass_2026}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-colegio_inventario}
@@ -100,3 +101,4 @@ networks:
   colegio_net:
     name: colegio_network
     driver: bridge
+
