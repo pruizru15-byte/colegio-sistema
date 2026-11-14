@@ -15,7 +15,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Monitor, MapPin, QrCode, 
+  LayoutDashboard, Monitor, Users, MapPin, QrCode, 
   Wrench, BarChart3, Settings, GraduationCap, Laptop
 } from 'lucide-react';
 
@@ -25,6 +25,7 @@ export const Sidebar = () => {
   const menuItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Equipos', path: '/inventario', icon: Monitor },
+    { label: 'Usuarios', path: '/usuarios', icon: Users },
     { label: 'Ubicaciones', path: '/inventario', icon: MapPin },
     { label: 'Códigos QR', path: '/escaner', icon: QrCode },
     { label: 'Mantenimientos', path: '/inventario', icon: Wrench },

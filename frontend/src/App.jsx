@@ -23,6 +23,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Inventario } from './pages/Inventario';
 import { NuevoEquipo } from './pages/NuevoEquipo';
+import { Usuarios } from './pages/Usuarios';
 import { FichaPublicaQR } from './pages/FichaPublicaQR';
 import { EscanerQR } from './pages/EscanerQR';
 
@@ -99,6 +100,14 @@ export default function App() {
                   <ProtectedRoute>
                     <Inventario />
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/usuarios"
+                element={
+                  <AdminRoute>
+                    <Usuarios />
+                  </AdminRoute>
                 }
               />
               <Route

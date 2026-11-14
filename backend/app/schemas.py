@@ -25,6 +25,12 @@ class UsuarioBase(BaseModel):
 class UsuarioCreate(UsuarioBase):
     password: str
 
+class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] = None
+    email: Optional[EmailStr] = None
+    rol: Optional[str] = None
+    password: Optional[str] = None
+
 class UsuarioResponse(UsuarioBase):
     id: int
     created_at: Optional[datetime] = None
@@ -123,3 +129,4 @@ class FichaEquipoQRResponse(BaseModel):
     ubicacion: Optional[UbicacionResponse] = None
     codigo_hash: str
     qr_imagen_base64: Optional[str] = None
+

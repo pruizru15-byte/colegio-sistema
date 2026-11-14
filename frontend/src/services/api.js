@@ -77,6 +77,27 @@ export const createUbicacionApi = async (data) => {
   return res.data;
 };
 
+// Usuarios
+export const getUsuariosApi = async (params = {}) => {
+  const res = await api.get('/usuarios', { params });
+  return res.data;
+};
+
+export const createUsuarioApi = async (data) => {
+  const res = await api.post('/usuarios', data);
+  return res.data;
+};
+
+export const updateUsuarioApi = async (id, data) => {
+  const res = await api.put(`/usuarios/${id}`, data);
+  return res.data;
+};
+
+export const deleteUsuarioApi = async (id) => {
+  const res = await api.delete(`/usuarios/${id}`);
+  return res.data;
+};
+
 // Códigos QR
 export const getFichaQRApi = async (codigoHash) => {
   const res = await api.get(`/qr/consultar/${codigoHash}`);
