@@ -138,6 +138,7 @@ export const EscanerQR = () => {
         </form>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
