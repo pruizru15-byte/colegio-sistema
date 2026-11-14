@@ -134,6 +134,22 @@ export const deleteMantenimientoApi = async (id) => {
   return res.data;
 };
 
+// Préstamos y Trazabilidad
+export const getPrestamosApi = async (params = {}) => {
+  const res = await api.get('/prestamos', { params });
+  return res.data;
+};
+
+export const createPrestamoApi = async (data) => {
+  const res = await api.post('/prestamos', data);
+  return res.data;
+};
+
+export const devolverPrestamoApi = async (id, params = {}) => {
+  const res = await api.post(`/prestamos/${id}/devolver`, null, { params });
+  return res.data;
+};
+
 // Códigos QR
 export const getFichaQRApi = async (codigoHash) => {
   const res = await api.get(`/qr/consultar/${codigoHash}`);

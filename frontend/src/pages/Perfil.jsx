@@ -16,22 +16,28 @@ import React, { useState } from 'react';
 import { 
   User, Mail, Lock, ShieldCheck, Key, Check, 
   AlertCircle, Shield, Laptop, GraduationCap, 
-  Wrench, Bell, Sun, Moon, LaptopMinimal, CheckCircle2
+  Wrench, Bell, Sun, Moon, LaptopMinimal, CheckCircle2, MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { updatePerfilApi, cambiarPasswordApi } from '../services/api';
+import { updatePerfilApi, cambiarPasswordApi, getUbicacionesApi } from '../services/api';
 
 export const Perfil = () => {
   const { user, updateUser } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState('datos');
+  const [ubicaciones, setUbicaciones] = useState([]);
+
+  useEffect(() => {
+    getUbicacionesApi().then(setUbicaciones).catch(console.error);
+  }, []);
 
   // Formulario Datos Personales
   const [formPerfil, setFormPerfil] = useState({
     nombre: user?.nombre || '',
     email: user?.email || '',
+    ubicacion_defecto_id: user?.ubicacion_defecto_id ? String(user.ubicacion_defecto_id) : '',
   });
 
   // Formulario Cambiar Contraseña
@@ -61,7 +67,12 @@ export const Perfil = () => {
     setErrorMsg('');
     setSavingPerfil(true);
     try {
-      const res = await updatePerfilApi(formPerfil);
+      const payload = {
+        nombre: formPerfil.nombre,
+        email: formPerfil.email,
+        ubicacion_defecto_id: formPerfil.ubicacion_defecto_id ? parseInt(formPerfil.ubicacion_defecto_id) : null
+      };
+      const res = await updatePerfilApi(payload);
       updateUser(res);
       triggerToast('¡Datos del perfil actualizados con éxito!');
     } catch (err) {
@@ -262,6 +273,13 @@ export const Perfil = () => {
               </div>
 
               <div className="flex items-center justify-between">
+                <span className="text-slate-500">Sede Asignada</span>
+                <span className="font-semibold text-blue-700 text-[11px] truncate max-w-[140px]" title={user?.ubicacion_defecto?.nombre}>
+                  {user?.ubicacion_defecto?.nombre || 'Laboratorio de Cómputo 1'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
                 <span className="text-slate-500">Encriptación de clave</span>
                 <span className="font-mono text-slate-700">BCrypt (72b)</span>
               </div>
@@ -397,6 +415,31 @@ export const Perfil = () => {
                     />
                     <span className="text-[10px] text-slate-400 mt-1 block">
                       El rol solo puede ser modificado desde el módulo de usuarios por un Administrador.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <span>Ubicación Predeterminada Asignada</span>
+                      <span className="text-[10px] text-blue-600 font-normal">Sede por defecto para préstamos</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <select
+                        value={formPerfil.ubicacion_defecto_id}
+                        onChange={(e) => setFormPerfil({ ...formPerfil, ubicacion_defecto_id: e.target.value })}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 font-medium bg-white"
+                      >
+                        <option value="">-- Sin ubicación predeterminada --</option>
+                        {ubicaciones.map((ub) => (
+                          <option key={ub.id} value={ub.id}>
+                            {ub.nombre} ({ub.pabellon || 'Campus'}) - {ub.piso || 'Nivel estándar'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Al solicitar o prestar dispositivos, esta sede se predetermina automáticamente en el sistema.
                     </span>
                   </div>
 

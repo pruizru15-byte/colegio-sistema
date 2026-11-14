@@ -16,11 +16,38 @@ from datetime import datetime, date
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr
 
+# --- Modelos de Ubicaciones ---
+class UbicacionBase(BaseModel):
+    nombre: str
+    pabellon: Optional[str] = None
+    piso: Optional[str] = None
+    responsable: Optional[str] = None
+
+class UbicacionCreate(UbicacionBase):
+    pass
+
+class UbicacionUpdate(BaseModel):
+    nombre: Optional[str] = None
+    pabellon: Optional[str] = None
+    piso: Optional[str] = None
+    responsable: Optional[str] = None
+
+class UbicacionResponse(UbicacionBase):
+    id: int
+    total_equipos: Optional[int] = 0
+    equipos_prestados_activos: Optional[int] = 0
+    usuarios_asignados: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+
 # --- Modelos de Autenticación y Usuarios ---
 class UsuarioBase(BaseModel):
     nombre: str
     email: EmailStr
     rol: Optional[str] = "consulta"
+    ubicacion_defecto_id: Optional[int] = None
 
 class UsuarioCreate(UsuarioBase):
     password: str
@@ -30,10 +57,12 @@ class UsuarioUpdate(BaseModel):
     email: Optional[EmailStr] = None
     rol: Optional[str] = None
     password: Optional[str] = None
+    ubicacion_defecto_id: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):
     id: int
     created_at: Optional[datetime] = None
+    ubicacion_defecto: Optional[UbicacionResponse] = None
 
     class Config:
         from_attributes = True
@@ -45,6 +74,7 @@ class LoginRequest(BaseModel):
 class PerfilUpdateRequest(BaseModel):
     nombre: str
     email: EmailStr
+    ubicacion_defecto_id: Optional[int] = None
 
 class CambiarPasswordRequest(BaseModel):
     current_password: str
@@ -54,23 +84,6 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     usuario: UsuarioResponse
-
-
-# --- Modelos de Ubicaciones ---
-class UbicacionBase(BaseModel):
-    nombre: str
-    pabellon: Optional[str] = None
-    piso: Optional[str] = None
-    responsable: Optional[str] = None
-
-class UbicacionCreate(UbicacionBase):
-    pass
-
-class UbicacionResponse(UbicacionBase):
-    id: int
-
-    class Config:
-        from_attributes = True
 
 
 # --- Modelos de Códigos QR ---
@@ -176,4 +189,50 @@ class MantenimientoResponse(MantenimientoBase):
 
     class Config:
         from_attributes = True
+
+
+# --- Modelos de Préstamos y Trazabilidad ---
+class PrestamoBase(BaseModel):
+    equipo_id: int
+    usuario_id: int
+    ubicacion_id: Optional[int] = None
+    fecha_devolucion_esperada: Optional[date] = None
+    motivo: Optional[str] = None
+    observaciones: Optional[str] = None
+
+class PrestamoCreate(PrestamoBase):
+    pass
+
+class PrestamoUpdate(BaseModel):
+    fecha_devolucion_esperada: Optional[date] = None
+    estado: Optional[str] = None
+    motivo: Optional[str] = None
+    observaciones: Optional[str] = None
+
+class PrestamoResponse(BaseModel):
+    id: int
+    codigo_prestamo: str
+    equipo_id: int
+    usuario_id: int
+    ubicacion_id: int
+    fecha_prestamo: datetime
+    fecha_devolucion_esperada: Optional[date] = None
+    fecha_devolucion_real: Optional[datetime] = None
+    estado: str
+    motivo: Optional[str] = None
+    observaciones: Optional[str] = None
+    created_at: Optional[datetime] = None
+    equipo: Optional[EquipoResponse] = None
+    usuario: Optional[UsuarioResponse] = None
+    ubicacion: Optional[UbicacionResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UbicacionDetailResponse(UbicacionResponse):
+    equipos: List[EquipoResponse] = []
+    prestamos_activos: List[PrestamoResponse] = []
+    usuarios_asignados_detalle: List[UsuarioResponse] = []
+
 

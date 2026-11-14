@@ -15,16 +15,6 @@
 SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
 
-CREATE TABLE usuarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(120) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    rol VARCHAR(50) NOT NULL DEFAULT 'consulta',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
 CREATE TABLE ubicaciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(120) NOT NULL,
@@ -33,6 +23,18 @@ CREATE TABLE ubicaciones (
     responsable VARCHAR(120),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(120) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    rol VARCHAR(50) NOT NULL DEFAULT 'consulta',
+    ubicacion_defecto_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (ubicacion_defecto_id) REFERENCES ubicaciones(id) ON DELETE SET NULL
 );
 
 CREATE TABLE equipos (
@@ -80,13 +82,32 @@ CREATE TABLE mantenimientos (
     FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE
 );
 
--- Datos iniciales de prueba
-INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES 
-('Administrador General', 'admin@colegio.edu.pe', '$2b$12$e8YQ3dK1Fz8c3yN0eM0zdeS7qXg0xI3Kj0qXg0xI3Kj0qXg0xI3Kj', 'administrador'),
-('Docente de Turno', 'docente@colegio.edu.pe', '$2b$12$e8YQ3dK1Fz8c3yN0eM0zdeS7qXg0xI3Kj0qXg0xI3Kj0qXg0xI3Kj', 'consulta');
+CREATE TABLE prestamos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    codigo_prestamo VARCHAR(50) NOT NULL UNIQUE,
+    equipo_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    ubicacion_id INT NOT NULL,
+    fecha_prestamo DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_devolucion_esperada DATE NULL,
+    fecha_devolucion_real DATETIME NULL,
+    estado VARCHAR(50) NOT NULL DEFAULT 'activo',
+    motivo VARCHAR(255) NULL,
+    observaciones TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (ubicacion_id) REFERENCES ubicaciones(id) ON DELETE CASCADE
+);
 
-INSERT INTO ubicaciones (nombre, pabellon, piso, responsable) VALUES
-('Laboratorio de Cómputo 1', 'Pabellón A', '2do Piso', 'Prof. Carlos Vega'),
-('Laboratorio de Cómputo 2', 'Pabellón A', '2do Piso', 'Prof. María Salazar'),
-('Sala de Profesores', 'Pabellón B', '1er Piso', 'Lic. Rosa Morales'),
-('Biblioteca Central', 'Pabellón C', '1er Piso', 'Prof. Juan Ramos');
+-- Datos iniciales de prueba
+INSERT INTO ubicaciones (id, nombre, pabellon, piso, responsable) VALUES
+(1, 'Laboratorio de Cómputo 1', 'Pabellón A', '2do Piso', 'Prof. Carlos Vega'),
+(2, 'Laboratorio de Cómputo 2', 'Pabellón A', '2do Piso', 'Prof. María Salazar'),
+(3, 'Sala de Profesores', 'Pabellón B', '1er Piso', 'Lic. Rosa Morales'),
+(4, 'Biblioteca Central', 'Pabellón C', '1er Piso', 'Prof. Juan Ramos');
+
+INSERT INTO usuarios (nombre, email, password_hash, rol, ubicacion_defecto_id) VALUES 
+('Administrador General', 'admin@colegio.edu.pe', '$2b$12$e8YQ3dK1Fz8c3yN0eM0zdeS7qXg0xI3Kj0qXg0xI3Kj0qXg0xI3Kj', 'administrador', 1),
+('Docente de Turno', 'docente@colegio.edu.pe', '$2b$12$e8YQ3dK1Fz8c3yN0eM0zdeS7qXg0xI3Kj0qXg0xI3Kj0qXg0xI3Kj', 'consulta', 2);

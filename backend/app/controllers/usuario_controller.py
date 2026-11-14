@@ -16,7 +16,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import UsuarioModel
+from app.models import UsuarioModel, UbicacionModel
 from app.schemas import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 from app.auth import get_password_hash, get_current_user, require_admin
 
@@ -61,11 +61,20 @@ def crear_usuario(
         )
 
     hashed_pw = get_password_hash(usuario_in.password)
+    
+    # Asignación de ubicación predeterminada (si no se proporciona, asigna la primera sede por defecto)
+    ubicacion_id = usuario_in.ubicacion_defecto_id
+    if not ubicacion_id:
+        primera_ub = db.query(UbicacionModel).first()
+        if primera_ub:
+            ubicacion_id = primera_ub.id
+
     nuevo_usuario = UsuarioModel(
         nombre=usuario_in.nombre,
         email=usuario_in.email,
         password_hash=hashed_pw,
-        rol=usuario_in.rol.lower() if usuario_in.rol else "consulta"
+        rol=usuario_in.rol.lower() if usuario_in.rol else "consulta",
+        ubicacion_defecto_id=ubicacion_id
     )
     db.add(nuevo_usuario)
     db.commit()
@@ -114,6 +123,9 @@ def actualizar_usuario(
 
     if usuario_update.password and usuario_update.password.strip():
         usuario.password_hash = get_password_hash(usuario_update.password)
+
+    if usuario_update.ubicacion_defecto_id is not None:
+        usuario.ubicacion_defecto_id = usuario_update.ubicacion_defecto_id
 
     db.commit()
     db.refresh(usuario)

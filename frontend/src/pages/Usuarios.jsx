@@ -16,10 +16,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, UserPlus, Search, Filter, ShieldCheck, 
   UserCheck, Wrench, GraduationCap, Edit, Trash2, 
-  X, Check, Lock, Mail, User, AlertCircle 
+  X, Check, Lock, Mail, User, AlertCircle, MapPin
 } from 'lucide-react';
 import { 
-  getUsuariosApi, createUsuarioApi, updateUsuarioApi, deleteUsuarioApi 
+  getUsuariosApi, createUsuarioApi, updateUsuarioApi, deleteUsuarioApi, getUbicacionesApi
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -33,13 +33,15 @@ export const Usuarios = () => {
   // Modales
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
+  const [ubicaciones, setUbicaciones] = useState([]);
 
   // Formulario Crear
   const [formCrear, setFormCrear] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'docente'
+    rol: 'docente',
+    ubicacion_defecto_id: ''
   });
 
   // Formulario Editar
@@ -47,8 +49,13 @@ export const Usuarios = () => {
     nombre: '',
     email: '',
     rol: '',
-    password: ''
+    password: '',
+    ubicacion_defecto_id: ''
   });
+
+  useEffect(() => {
+    getUbicacionesApi().then(setUbicaciones).catch(console.error);
+  }, []);
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -83,9 +90,13 @@ export const Usuarios = () => {
     setErrorMsg('');
     setSaving(true);
     try {
-      await createUsuarioApi(formCrear);
+      const payload = {
+        ...formCrear,
+        ubicacion_defecto_id: formCrear.ubicacion_defecto_id ? parseInt(formCrear.ubicacion_defecto_id) : null
+      };
+      await createUsuarioApi(payload);
       setModalCrear(false);
-      setFormCrear({ nombre: '', email: '', password: '', rol: 'docente' });
+      setFormCrear({ nombre: '', email: '', password: '', rol: 'docente', ubicacion_defecto_id: '' });
       showToast('¡Usuario registrado exitosamente!');
       cargarUsuarios();
     } catch (err) {
@@ -101,7 +112,8 @@ export const Usuarios = () => {
       nombre: u.nombre,
       email: u.email,
       rol: u.rol,
-      password: ''
+      password: '',
+      ubicacion_defecto_id: u.ubicacion_defecto_id ? String(u.ubicacion_defecto_id) : ''
     });
     setErrorMsg('');
   };
@@ -115,7 +127,8 @@ export const Usuarios = () => {
       const payload = {
         nombre: formEditar.nombre,
         email: formEditar.email,
-        rol: formEditar.rol
+        rol: formEditar.rol,
+        ubicacion_defecto_id: formEditar.ubicacion_defecto_id ? parseInt(formEditar.ubicacion_defecto_id) : null
       };
       if (formEditar.password.trim()) {
         payload.password = formEditar.password.trim();
@@ -297,6 +310,7 @@ export const Usuarios = () => {
                   <th className="py-3.5 px-5">Usuario</th>
                   <th className="py-3.5 px-4">Correo Institucional</th>
                   <th className="py-3.5 px-4">Rol Asignado</th>
+                  <th className="py-3.5 px-4">Sede Predeterminada</th>
                   <th className="py-3.5 px-4">Fecha de Registro</th>
                   <th className="py-3.5 px-5 text-right">Acciones</th>
                 </tr>
@@ -340,6 +354,16 @@ export const Usuarios = () => {
                       {/* Rol */}
                       <td className="py-3.5 px-4">
                         {getRolBadge(u.rol)}
+                      </td>
+
+                      {/* Sede Predeterminada */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5 text-slate-700">
+                          <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                          <span className="font-medium text-[11px]">
+                            {u.ubicacion_defecto?.nombre || 'Laboratorio de Cómputo 1'}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Fecha */}
@@ -469,6 +493,21 @@ export const Usuarios = () => {
                 </select>
               </div>
 
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Ubicación / Sede Predeterminada</label>
+                <select
+                  value={formCrear.ubicacion_defecto_id}
+                  onChange={(e) => setFormCrear({ ...formCrear, ubicacion_defecto_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                >
+                  <option value="">-- Predeterminada por el Sistema --</option>
+                  {ubicaciones.map(ub => (
+                    <option key={ub.id} value={ub.id}>{ub.nombre} ({ub.pabellon || 'Campus'})</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-0.5">Sede asignada por defecto al solicitar o prestar dispositivos</p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
@@ -553,6 +592,21 @@ export const Usuarios = () => {
                   <option value="docente">Docente</option>
                   <option value="consulta">Solo Consulta</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Ubicación / Sede Predeterminada</label>
+                <select
+                  value={formEditar.ubicacion_defecto_id}
+                  onChange={(e) => setFormEditar({ ...formEditar, ubicacion_defecto_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium"
+                >
+                  <option value="">-- Sin ubicación asignada --</option>
+                  {ubicaciones.map(ub => (
+                    <option key={ub.id} value={ub.id}>{ub.nombre} ({ub.pabellon || 'Campus'})</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-0.5">Sede asignada por defecto al solicitar o prestar dispositivos</p>
               </div>
 
               <div>

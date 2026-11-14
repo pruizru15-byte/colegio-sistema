@@ -26,24 +26,6 @@ from app.controllers.qr_controller import crear_codigo_qr_para_equipo
 
 router = APIRouter(tags=["Gestión de Equipos e Inventario"])
 
-# --- Ubicaciones ---
-@router.get("/ubicaciones", response_model=List[UbicacionResponse])
-def listar_ubicaciones(db: Session = Depends(get_db)):
-    return db.query(UbicacionModel).all()
-
-@router.post("/ubicaciones", response_model=UbicacionResponse, status_code=status.HTTP_201_CREATED)
-def crear_ubicacion(
-    ubicacion_in: UbicacionCreate,
-    db: Session = Depends(get_db),
-    admin: UsuarioModel = Depends(require_admin)
-):
-    nueva_ubicacion = UbicacionModel(**ubicacion_in.model_dump())
-    db.add(nueva_ubicacion)
-    db.commit()
-    db.refresh(nueva_ubicacion)
-    return nueva_ubicacion
-
-
 # --- Equipos e Inventario ---
 @router.post("/equipos", response_model=EquipoResponse, status_code=status.HTTP_201_CREATED)
 def registrar_equipo(
@@ -169,3 +151,4 @@ def eliminar_equipo(
     db.delete(equipo)
     db.commit()
     return None
+

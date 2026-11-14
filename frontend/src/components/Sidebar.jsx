@@ -27,7 +27,7 @@ export const Sidebar = ({ collapsed = false, toggleSidebar }) => {
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Equipos', path: '/inventario', icon: Monitor },
     { label: 'Usuarios', path: '/usuarios', icon: Users },
-    { label: 'Ubicaciones', path: '/inventario', icon: MapPin },
+    { label: 'Ubicaciones', path: '/ubicaciones', icon: MapPin },
     { label: 'Códigos QR', path: '/escaner', icon: QrCode },
     { label: 'Mantenimientos', path: '/mantenimientos', icon: Wrench },
     { label: 'Reportes', path: '/inventario', icon: BarChart3 },

@@ -26,6 +26,7 @@ import { NuevoEquipo } from './pages/NuevoEquipo';
 import { Usuarios } from './pages/Usuarios';
 import { Perfil } from './pages/Perfil';
 import { Mantenimientos } from './pages/Mantenimientos';
+import { Ubicaciones } from './pages/Ubicaciones';
 import { FichaPublicaQR } from './pages/FichaPublicaQR';
 import { EscanerQR } from './pages/EscanerQR';
 
@@ -121,6 +122,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Mantenimientos />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ubicaciones"
+                element={
+                  <ProtectedRoute>
+                    <Ubicaciones />
                   </ProtectedRoute>
                 }
               />

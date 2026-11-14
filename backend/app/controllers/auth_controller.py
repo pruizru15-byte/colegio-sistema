@@ -86,6 +86,9 @@ def actualizar_perfil(
         current_user.email = perfil_data.email
 
     current_user.nombre = perfil_data.nombre
+    if perfil_data.ubicacion_defecto_id is not None:
+        current_user.ubicacion_defecto_id = perfil_data.ubicacion_defecto_id
+
     db.commit()
     db.refresh(current_user)
     return current_user

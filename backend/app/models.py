@@ -24,8 +24,12 @@ class UsuarioModel(Base):
     email = Column(String(150), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     rol = Column(String(50), nullable=False, default="consulta")
+    ubicacion_defecto_id = Column(Integer, ForeignKey("ubicaciones.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    ubicacion_defecto = relationship("UbicacionModel", foreign_keys=[ubicacion_defecto_id], back_populates="usuarios_defecto")
+    prestamos = relationship("PrestamoModel", back_populates="usuario")
 
 
 class UbicacionModel(Base):
@@ -40,6 +44,8 @@ class UbicacionModel(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     equipos = relationship("EquipoModel", back_populates="ubicacion")
+    usuarios_defecto = relationship("UsuarioModel", foreign_keys=[UsuarioModel.ubicacion_defecto_id], back_populates="ubicacion_defecto")
+    prestamos = relationship("PrestamoModel", back_populates="ubicacion")
 
 
 class EquipoModel(Base):
@@ -61,6 +67,7 @@ class EquipoModel(Base):
     ubicacion = relationship("UbicacionModel", back_populates="equipos")
     codigo_qr = relationship("CodigoQRModel", back_populates="equipo", uselist=False, cascade="all, delete-orphan")
     mantenimientos = relationship("MantenimientoModel", back_populates="equipo", cascade="all, delete-orphan")
+    prestamos = relationship("PrestamoModel", back_populates="equipo", cascade="all, delete-orphan")
 
 
 class CodigoQRModel(Base):
@@ -96,4 +103,27 @@ class MantenimientoModel(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     equipo = relationship("EquipoModel", back_populates="mantenimientos")
+
+
+class PrestamoModel(Base):
+    __tablename__ = "prestamos"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    codigo_prestamo = Column(String(50), unique=True, nullable=False, index=True)
+    equipo_id = Column(Integer, ForeignKey("equipos.id", ondelete="CASCADE"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    ubicacion_id = Column(Integer, ForeignKey("ubicaciones.id", ondelete="CASCADE"), nullable=False)
+    fecha_prestamo = Column(DateTime, server_default=func.now(), nullable=False)
+    fecha_devolucion_esperada = Column(Date, nullable=True)
+    fecha_devolucion_real = Column(DateTime, nullable=True)
+    estado = Column(String(50), nullable=False, default="activo")  # activo, devuelto, vencido
+    motivo = Column(String(255), nullable=True)
+    observaciones = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    equipo = relationship("EquipoModel", back_populates="prestamos")
+    usuario = relationship("UsuarioModel", back_populates="prestamos")
+    ubicacion = relationship("UbicacionModel", back_populates="prestamos")
+
 
