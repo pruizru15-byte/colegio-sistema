@@ -22,10 +22,16 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('app_theme', theme);
     const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
     if (theme === 'oscuro') {
       root.classList.add('dark');
+      root.classList.remove('combinado');
+    } else if (theme === 'combinado') {
+      root.classList.remove('dark');
+      root.classList.add('combinado');
     } else {
       root.classList.remove('dark');
+      root.classList.remove('combinado');
     }
   }, [theme]);
 

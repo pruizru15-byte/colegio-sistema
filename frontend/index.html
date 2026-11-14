@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="claro">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='5' height='5' x='3' y='3' rx='1'/><rect width='5' height='5' x='16' y='3' rx='1'/><rect width='5' height='5' x='3' y='16' rx='1'/><path d='M21 16h-3a2 2 0 0 0-2 2v3'/><path d='M21 21v.01'/><path d='M12 7v3a2 2 0 0 1-2 2H7'/><path d='M3 12h.01'/><path d='M12 3h.01'/><path d='M12 16v.01'/><path d='M16 12h1'/><path d='M21 12v.01'/><path d='M12 21v-1'/></svg>" />
@@ -14,6 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -29,6 +30,153 @@
         font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        transition: background-color 0.25s ease, color 0.25s ease;
+      }
+
+      /* ========================================================
+         SISTEMA DE TEMAS: CLARO, OSCURO Y COMBINADO
+         ======================================================== */
+
+      /* 1. TEMA CLARO (Default) */
+      [data-theme="claro"] {
+        color-scheme: light;
+      }
+
+      /* 2. TEMA OSCURO (Dark Mode Completo) */
+      [data-theme="oscuro"] {
+        color-scheme: dark;
+      }
+      [data-theme="oscuro"] body,
+      [data-theme="oscuro"] .bg-\[\#f8fafc\],
+      [data-theme="oscuro"] main {
+        background-color: #070a13 !important;
+        color: #e2e8f0 !important;
+      }
+      [data-theme="oscuro"] header,
+      [data-theme="oscuro"] footer {
+        background-color: #0c1220 !important;
+        border-color: #1e293b !important;
+        color: #f8fafc !important;
+      }
+      [data-theme="oscuro"] .bg-white {
+        background-color: #0f172a !important;
+        color: #e2e8f0 !important;
+      }
+      [data-theme="oscuro"] .bg-slate-50,
+      [data-theme="oscuro"] .bg-slate-50\/50,
+      [data-theme="oscuro"] .bg-slate-50\/70,
+      [data-theme="oscuro"] .bg-slate-50\/80 {
+        background-color: #172033 !important;
+        color: #cbd5e1 !important;
+      }
+      [data-theme="oscuro"] .bg-slate-100 {
+        background-color: #1e293b !important;
+        color: #e2e8f0 !important;
+      }
+      [data-theme="oscuro"] .border-slate-100,
+      [data-theme="oscuro"] .border-slate-200,
+      [data-theme="oscuro"] .border-slate-200\/60,
+      [data-theme="oscuro"] .border-slate-200\/80,
+      [data-theme="oscuro"] .border-slate-200\/90,
+      [data-theme="oscuro"] .border-slate-300 {
+        border-color: #1e293b !important;
+      }
+      [data-theme="oscuro"] .text-slate-900,
+      [data-theme="oscuro"] .text-slate-800 {
+        color: #f8fafc !important;
+      }
+      [data-theme="oscuro"] .text-slate-700,
+      [data-theme="oscuro"] .text-slate-600 {
+        color: #cbd5e1 !important;
+      }
+      [data-theme="oscuro"] .text-slate-500 {
+        color: #94a3b8 !important;
+      }
+      [data-theme="oscuro"] .text-slate-400 {
+        color: #64748b !important;
+      }
+      [data-theme="oscuro"] input,
+      [data-theme="oscuro"] select,
+      [data-theme="oscuro"] textarea {
+        background-color: #172033 !important;
+        border-color: #27354f !important;
+        color: #f8fafc !important;
+      }
+      [data-theme="oscuro"] kbd {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+        color: #94a3b8 !important;
+      }
+      [data-theme="oscuro"] tr:hover {
+        background-color: #172033 !important;
+      }
+      [data-theme="oscuro"] thead tr {
+        background-color: #111a2e !important;
+        border-color: #1e293b !important;
+      }
+      /* Ajuste de gráficos en modo oscuro */
+      [data-theme="oscuro"] svg text.fill-slate-700 {
+        fill: #f8fafc !important;
+      }
+      [data-theme="oscuro"] svg text.fill-slate-400,
+      [data-theme="oscuro"] svg text.fill-slate-500 {
+        fill: #94a3b8 !important;
+      }
+      [data-theme="oscuro"] svg line {
+        stroke: #1e293b !important;
+      }
+      [data-theme="oscuro"] svg circle[stroke="#f1f5f9"] {
+        stroke: #1e293b !important;
+      }
+
+      /* 3. TEMA COMBINADO (Navegación Marina Profunda + Área de Trabajo Blanca de Alto Contraste) */
+      [data-theme="combinado"] {
+        color-scheme: light;
+      }
+      [data-theme="combinado"] body,
+      [data-theme="combinado"] .bg-\[\#f8fafc\] {
+        background-color: #edf2f7 !important;
+      }
+      [data-theme="combinado"] header {
+        background-color: #0b1322 !important;
+        border-color: #1c2638 !important;
+        color: #ffffff !important;
+      }
+      [data-theme="combinado"] header h1 {
+        color: #ffffff !important;
+      }
+      [data-theme="combinado"] header p {
+        color: #94a3b8 !important;
+      }
+      [data-theme="combinado"] header .text-slate-800,
+      [data-theme="combinado"] header .text-slate-700 {
+        color: #f8fafc !important;
+      }
+      [data-theme="combinado"] header .bg-slate-50 {
+        background-color: #141d30 !important;
+        border-color: #22304d !important;
+        color: #cbd5e1 !important;
+      }
+      [data-theme="combinado"] header .border-slate-200 {
+        border-color: #22304d !important;
+      }
+      [data-theme="combinado"] header button {
+        color: #f8fafc !important;
+      }
+      [data-theme="combinado"] header kbd {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+        color: #94a3b8 !important;
+      }
+      [data-theme="combinado"] .bg-white {
+        background-color: #ffffff !important;
+        box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.07) !important;
+        border-color: #cbd5e1 !important;
+      }
+      [data-theme="combinado"] footer {
+        background-color: #0b1322 !important;
+        border-color: #1c2638 !important;
+        color: #94a3b8 !important;
       }
     </style>
   </head>
