@@ -150,6 +150,32 @@ export const devolverPrestamoApi = async (id, params = {}) => {
   return res.data;
 };
 
+// Reportes Estratégicos
+export const getReportesResumenApi = async () => {
+  const res = await api.get('/reportes/resumen');
+  return res.data;
+};
+
+export const getReporteInventarioApi = async (params = {}) => {
+  const res = await api.get('/reportes/inventario', { params });
+  return res.data;
+};
+
+export const getReporteMantenimientosApi = async (params = {}) => {
+  const res = await api.get('/reportes/mantenimientos', { params });
+  return res.data;
+};
+
+export const getReportePrestamosApi = async (params = {}) => {
+  const res = await api.get('/reportes/prestamos', { params });
+  return res.data;
+};
+
+export const getReporteEstadisticasApi = async () => {
+  const res = await api.get('/reportes/estadisticas');
+  return res.data;
+};
+
 // Códigos QR
 export const getFichaQRApi = async (codigoHash) => {
   const res = await api.get(`/qr/consultar/${codigoHash}`);

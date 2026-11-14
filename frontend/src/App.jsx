@@ -27,6 +27,7 @@ import { Usuarios } from './pages/Usuarios';
 import { Perfil } from './pages/Perfil';
 import { Mantenimientos } from './pages/Mantenimientos';
 import { Ubicaciones } from './pages/Ubicaciones';
+import { Reportes } from './pages/Reportes';
 import { FichaPublicaQR } from './pages/FichaPublicaQR';
 import { EscanerQR } from './pages/EscanerQR';
 
@@ -130,6 +131,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Ubicaciones />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reportes"
+                element={
+                  <ProtectedRoute>
+                    <Reportes />
                   </ProtectedRoute>
                 }
               />
