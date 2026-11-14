@@ -15,8 +15,9 @@
 import io
 import uuid
 import base64
+from typing import Optional, List
 import qrcode
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, Query, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.config import settings
@@ -104,3 +105,85 @@ def descargar_imagen_qr(codigo_hash: str, db: Session = Depends(get_db)):
     
     img_bytes = render_qr_bytes(qr_record.url_destino)
     return Response(content=img_bytes, media_type="image/png")
+
+
+@router.get("/catalogo")
+def catalogo_codigos_qr(
+    tipo: Optional[str] = Query(None),
+    ubicacion_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna el catálogo completo de etiquetas y códigos QR del colegio
+    para rotulación masiva, impresión de stickers patrimoniales y auditoría.
+    """
+    query = db.query(CodigoQRModel).join(EquipoModel, CodigoQRModel.equipo_id == EquipoModel.id)
+
+    if tipo and tipo != "todos":
+        query = query.filter(EquipoModel.tipo == tipo)
+    if ubicacion_id:
+        query = query.filter(EquipoModel.ubicacion_id == ubicacion_id)
+
+    qr_list = query.all()
+    resultado = []
+
+    for item in qr_list:
+        eq = item.equipo
+        img_bytes = render_qr_bytes(item.url_destino)
+        b64_str = base64.b64encode(img_bytes).decode("utf-8")
+
+        resultado.append({
+            "id": item.id,
+            "codigo_hash": item.codigo_hash,
+            "url_destino": item.url_destino,
+            "equipo_id": eq.id,
+            "codigo_patrimonial": eq.codigo_patrimonial,
+            "nombre": eq.nombre,
+            "tipo": eq.tipo,
+            "marca": eq.marca or "-",
+            "modelo": eq.modelo or "-",
+            "numero_serie": eq.numero_serie or "-",
+            "estado": eq.estado,
+            "ubicacion": eq.ubicacion.nombre if eq.ubicacion else "Sin Asignar",
+            "pabellon": eq.ubicacion.pabellon if eq.ubicacion else "Campus",
+            "piso": eq.ubicacion.piso if eq.ubicacion else "-",
+            "qr_imagen_base64": f"data:image/png;base64,{b64_str}"
+        })
+
+    return resultado
+
+
+@router.get("/stats")
+def estadisticas_qr(db: Session = Depends(get_db)):
+    """
+    Métricas para las tarjetas superiores del módulo de códigos QR.
+    """
+    total_equipos = db.query(EquipoModel).count()
+    total_qr = db.query(CodigoQRModel).count()
+    cobertura = round((total_qr / total_equipos) * 100, 1) if total_equipos > 0 else 100.0
+
+    equipos_sin_qr = db.query(EquipoModel).outerjoin(CodigoQRModel).filter(CodigoQRModel.id == None).all()
+
+    return {
+        "total_equipos": total_equipos,
+        "total_qr": total_qr,
+        "cobertura_porcentaje": cobertura,
+        "equipos_sin_qr_count": len(equipos_sin_qr),
+        "equipos_sin_qr": [{"id": e.id, "nombre": e.nombre, "codigo_patrimonial": e.codigo_patrimonial} for e in equipos_sin_qr]
+    }
+
+
+@router.post("/generar-faltantes")
+def generar_qr_faltantes(db: Session = Depends(get_db)):
+    """
+    Genera códigos QR automáticamente para todos los equipos registrados que aún no tengan uno.
+    """
+    equipos_sin_qr = db.query(EquipoModel).outerjoin(CodigoQRModel).filter(CodigoQRModel.id == None).all()
+    generados = 0
+    for eq in equipos_sin_qr:
+        crear_codigo_qr_para_equipo(eq, db)
+        generados += 1
+
+    return {"message": f"Se generaron {generados} códigos QR exitosamente."}
+
+

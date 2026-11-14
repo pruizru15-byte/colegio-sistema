@@ -182,5 +182,15 @@ export const getFichaQRApi = async (codigoHash) => {
   return res.data;
 };
 
+export const getQRCatalogoApi = async (params = {}) => {
+  const res = await api.get('/qr/catalogo', { params });
+  return res.data;
+};
+
+export const getQRStatsApi = async () => {
+  const res = await api.get('/qr/stats');
+  return res.data;
+};
+
 export default api;
 
