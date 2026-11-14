@@ -178,6 +178,45 @@
         border-color: #1c2638 !important;
         color: #94a3b8 !important;
       }
+
+      /* ========================================================
+         ESTILOS DEL ESCÁNER QR ÓPTICO (html5-qrcode)
+         ======================================================== */
+      #qr-reader {
+        width: 100% !important;
+        max-width: 600px !important;
+        margin: 0 auto !important;
+        border: none !important;
+        background: #020617 !important;
+        border-radius: 1rem !important;
+        overflow: hidden !important;
+        position: relative !important;
+      }
+      #qr-reader video {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 280px !important;
+        max-height: 460px !important;
+        object-fit: cover !important;
+        border-radius: 1rem !important;
+        display: block !important;
+        margin: 0 auto !important;
+      }
+      #qr-reader__scan_region {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        background: transparent !important;
+      }
+      #qr-reader__scan_region img,
+      #qr-reader__dashboard,
+      #qr-reader__dashboard_section,
+      #qr-reader__header_message,
+      #qr-shaded-region {
+        display: none !important;
+      }
     </style>
   </head>
   <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">

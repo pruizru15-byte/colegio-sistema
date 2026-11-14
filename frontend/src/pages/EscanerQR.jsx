@@ -112,17 +112,11 @@ export const EscanerQR = () => {
         }
       }
 
-      // Solicitar permisos de cámara al navegador de forma explícita
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const testStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: { ideal: 'environment' } } 
-          });
-          testStream.getTracks().forEach(t => t.stop());
-        } catch (permErr) {
-          console.warn('Esperando permiso del navegador...', permErr);
-        }
-      }
+      // Asegurar que el estado indique cámara activa para que el contenedor esté en el DOM con tamaño real
+      setCamaraIniciada(true);
+
+      // Pequeña pausa asíncrona para que React pinte el contenedor #qr-reader con dimensiones completas
+      await new Promise(resolve => setTimeout(resolve, 80));
 
       // Listar cámaras físicas disponibles
       let devices = [];
@@ -132,51 +126,86 @@ export const EscanerQR = () => {
           setCamaras(devices);
         }
       } catch (devErr) {
-        console.warn('No se pudieron listar cámaras adicionales:', devErr);
+        console.warn('Búsqueda inicial de dispositivos:', devErr);
+      }
+
+      // Determinar la cámara idónea
+      let targetCamera = dispositivoId;
+      if (!targetCamera && devices && devices.length > 0) {
+        // En móviles o tablets, preferir cámara trasera
+        const backCam = devices.find(d => d.label && /back|rear|trasera|ambiente/i.test(d.label));
+        // En PC/laptop, evitar cámaras virtuales inactivas (OBS, DroidCam) si existe cámara física integrada
+        const realCam = devices.find(d => d.label && !/virtual|obs/i.test(d.label));
+        targetCamera = backCam?.id || realCam?.id || devices[0].id;
+      }
+
+      // Si aún no hay cámara específica, solicitar por facingMode
+      if (!targetCamera) {
+        targetCamera = { facingMode: 'environment' };
       }
 
       // Inicializar Html5Qrcode en el contenedor #qr-reader
       const html5QrCode = new Html5Qrcode('qr-reader');
       html5QrCodeRef.current = html5QrCode;
 
-      const targetCamera = dispositivoId || (devices.length > 0 ? devices[0].id : { facingMode: 'environment' });
-
       const qrConfig = {
         fps: 15,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const edge = Math.floor(minEdge * 0.72);
+          return { width: Math.max(edge, 200), height: Math.max(edge, 200) };
+        },
       };
 
-      await html5QrCode.start(
-        targetCamera,
-        qrConfig,
-        (decodedText) => {
-          let hash = decodedText;
-          if (decodedText.includes('/ficha/')) {
-            hash = decodedText.split('/ficha/')[1];
-          }
-          registrarEscaneo(hash);
-          html5QrCode.stop().then(() => {
+      const onScanSuccess = (decodedText) => {
+        let hash = decodedText;
+        if (decodedText.includes('/ficha/')) {
+          hash = decodedText.split('/ficha/')[1];
+        }
+        hash = hash.split('?')[0].replace(/\/+$/, '').trim();
+        registrarEscaneo(hash);
+        if (html5QrCodeRef.current) {
+          html5QrCodeRef.current.stop().then(() => {
             navigate(`/ficha/${hash}`);
           }).catch(() => {
             navigate(`/ficha/${hash}`);
           });
-        },
-        () => {
-          // Frame sin QR
+        } else {
+          navigate(`/ficha/${hash}`);
         }
-      );
+      };
+
+      // Intentar iniciar con la cámara seleccionada
+      try {
+        await html5QrCode.start(targetCamera, qrConfig, onScanSuccess, () => {});
+      } catch (errFirst) {
+        console.warn('Primer intento de inicio de cámara falló, intentando con facingMode "user":', errFirst);
+        // Fallback a cámara frontal / genérica de laptop
+        await html5QrCode.start({ facingMode: 'user' }, qrConfig, onScanSuccess, () => {});
+      }
+
+      // Con el permiso ya concedido, consultar lista actualizada de cámaras
+      try {
+        const availableDevices = await Html5Qrcode.getCameras();
+        if (availableDevices && availableDevices.length > 0) {
+          setCamaras(availableDevices);
+          if (typeof targetCamera === 'string') {
+            setCamaraSeleccionada(targetCamera);
+          } else {
+            setCamaraSeleccionada(availableDevices[0].id);
+          }
+        }
+      } catch (listErr) {
+        console.warn('Error al actualizar lista de cámaras:', listErr);
+      }
 
       setCamaraIniciada(true);
-      if (typeof targetCamera === 'string') {
-        setCamaraSeleccionada(targetCamera);
-      }
     } catch (err) {
       console.error('Error al iniciar cámara:', err);
       setErrorCamara(
         err?.message?.includes('Permission') || err?.name === 'NotAllowedError'
-          ? 'Permiso de cámara denegado. Permite el acceso a la cámara en tu navegador.'
-          : 'No se pudo iniciar la cámara web. Asegúrate de tener una cámara conectada y dar permiso al navegador.'
+          ? 'Permiso de cámara bloqueado en el navegador. Haz clic en el ícono de permisos de la barra de direcciones y selecciona "Permitir" para activar el escáner.'
+          : 'No se pudo iniciar el sensor de la cámara web. Asegúrate de tener una cámara conectada y otorgar permiso en el navegador.'
       );
       setCamaraIniciada(false);
     } finally {
@@ -190,6 +219,7 @@ export const EscanerQR = () => {
         if (html5QrCodeRef.current.isScanning) {
           await html5QrCodeRef.current.stop();
         }
+        await html5QrCodeRef.current.clear();
       } catch (e) {
         console.warn('Error al detener cámara:', e);
       }
@@ -266,6 +296,45 @@ export const EscanerQR = () => {
 
   return (
     <div className="space-y-6">
+      
+      {/* Estilos específicos para html5-qrcode para asegurar video responsivo y visualización fluida */}
+      <style>{`
+        #qr-reader {
+          width: 100% !important;
+          max-width: 600px !important;
+          margin: 0 auto !important;
+          border: none !important;
+          background: #020617 !important;
+          border-radius: 1rem !important;
+          overflow: hidden !important;
+          position: relative !important;
+        }
+        #qr-reader video {
+          width: 100% !important;
+          height: auto !important;
+          min-height: 280px !important;
+          max-height: 460px !important;
+          object-fit: cover !important;
+          border-radius: 1rem !important;
+          display: block !important;
+          margin: 0 auto !important;
+        }
+        #qr-reader__scan_region {
+          position: relative !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          background: transparent !important;
+        }
+        #qr-reader__scan_region img,
+        #qr-reader__dashboard,
+        #qr-reader__dashboard_section,
+        #qr-reader__header_message,
+        #qr-shaded-region {
+          display: none !important;
+        }
+      `}</style>
       
       {/* 1. Tarjetas Superiores de Métricas del Módulo QR */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print:hidden">
@@ -469,45 +538,53 @@ export const EscanerQR = () => {
               )}
 
               {/* Contenedor del Lector QR */}
-              <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 min-h-[300px] flex items-center justify-center">
+              <div className="relative rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 min-h-[340px] flex items-center justify-center shadow-inner">
                 
-                {/* Elemento donde html5-qrcode inyecta el stream de video */}
+                {/* Elemento donde html5-qrcode inyecta el stream de video - SIEMPRE VISIBLE */}
                 <div 
                   id="qr-reader" 
-                  className={`w-full ${camaraIniciada ? 'block' : 'hidden'}`}
+                  className="w-full flex items-center justify-center"
                 ></div>
 
                 {/* Si la cámara está activa, superponer línea láser guía */}
-                {camaraIniciada && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="w-64 h-64 border-2 border-dashed border-sky-400/70 rounded-3xl relative overflow-hidden">
+                {camaraIniciada && !camaraCargando && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+                    <div className="w-64 h-64 border-2 border-dashed border-sky-400/80 rounded-3xl relative overflow-hidden shadow-[0_0_25px_rgba(56,189,248,0.25)]">
                       <div className="w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#38bdf8] animate-pulse"></div>
-                      <div className="absolute bottom-2 inset-x-0 text-center text-[10px] text-white/70 font-semibold uppercase tracking-wider">
+                      <div className="absolute bottom-3 inset-x-0 text-center text-[10px] text-white/90 font-bold uppercase tracking-wider bg-black/50 py-1 backdrop-blur-xs">
                         Alinear QR en el marco
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Si la cámara no está activa, mostrar pantalla de inicio con botón explícito */}
-                {!camaraIniciada && (
-                  <div className="p-8 text-center text-white space-y-3">
+                {/* Indicador mientras la cámara se inicializa */}
+                {camaraCargando && (
+                  <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 text-white">
+                    <RefreshCw className="w-8 h-8 text-sky-400 animate-spin" />
+                    <span className="text-xs font-semibold text-sky-200">Iniciando sensor de cámara...</span>
+                  </div>
+                )}
+
+                {/* Si la cámara no está activa, mostrar pantalla de bienvenida con botón explícito */}
+                {!camaraIniciada && !camaraCargando && (
+                  <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-8 text-center text-white space-y-4 z-20">
                     <div className="w-16 h-16 rounded-3xl bg-white/10 text-sky-400 flex items-center justify-center mx-auto backdrop-blur-md border border-white/10 shadow-inner">
                       <Camera className="w-8 h-8" />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-white">Lector de Cámara Web / Móvil</h4>
-                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 leading-relaxed">
                         Para escanear códigos impresos en computadoras, laptops o proyectores, habilita la cámara de tu equipo.
                       </p>
                     </div>
                     <button
                       onClick={() => activarCamara()}
                       disabled={camaraCargando}
-                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30 inline-flex items-center gap-2 transition transform hover:scale-105 cursor-pointer"
+                      className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/25 inline-flex items-center gap-2 transition transform hover:scale-105 cursor-pointer disabled:opacity-50"
                     >
                       <Camera className="w-4 h-4" />
-                      {camaraCargando ? 'Habilitando...' : 'Habilitar Cámara Ahora'}
+                      Habilitar Cámara Ahora
                     </button>
                   </div>
                 )}
