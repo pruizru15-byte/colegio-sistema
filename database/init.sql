@@ -61,6 +61,25 @@ CREATE TABLE codigos_qr (
     FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE
 );
 
+CREATE TABLE mantenimientos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    codigo_orden VARCHAR(50) NOT NULL UNIQUE,
+    equipo_id INT NOT NULL,
+    tipo VARCHAR(50) NOT NULL DEFAULT 'preventivo',
+    prioridad VARCHAR(50) NOT NULL DEFAULT 'media',
+    estado VARCHAR(50) NOT NULL DEFAULT 'programado',
+    fecha_programada DATE NOT NULL,
+    fecha_completada DATE,
+    tecnico_responsable VARCHAR(120) NOT NULL,
+    costo_estimado DECIMAL(10,2) DEFAULT 0.00,
+    descripcion_problema TEXT NOT NULL,
+    diagnostico_solucion TEXT,
+    piezas_reemplazadas VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE CASCADE
+);
+
 -- Datos iniciales de prueba
 INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES 
 ('Administrador General', 'admin@colegio.edu.pe', '$2b$12$e8YQ3dK1Fz8c3yN0eM0zdeS7qXg0xI3Kj0qXg0xI3Kj0qXg0xI3Kj', 'administrador'),

@@ -108,6 +108,32 @@ export const deleteUsuarioApi = async (id) => {
   return res.data;
 };
 
+// Mantenimientos
+export const getMantenimientosApi = async (params = {}) => {
+  const res = await api.get('/mantenimientos', { params });
+  return res.data;
+};
+
+export const getMantenimientoByIdApi = async (id) => {
+  const res = await api.get(`/mantenimientos/${id}`);
+  return res.data;
+};
+
+export const createMantenimientoApi = async (data) => {
+  const res = await api.post('/mantenimientos', data);
+  return res.data;
+};
+
+export const updateMantenimientoApi = async (id, data) => {
+  const res = await api.put(`/mantenimientos/${id}`, data);
+  return res.data;
+};
+
+export const deleteMantenimientoApi = async (id) => {
+  const res = await api.delete(`/mantenimientos/${id}`);
+  return res.data;
+};
+
 // Códigos QR
 export const getFichaQRApi = async (codigoHash) => {
   const res = await api.get(`/qr/consultar/${codigoHash}`);

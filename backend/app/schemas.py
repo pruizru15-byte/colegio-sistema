@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr
 
@@ -137,4 +137,43 @@ class FichaEquipoQRResponse(BaseModel):
     ubicacion: Optional[UbicacionResponse] = None
     codigo_hash: str
     qr_imagen_base64: Optional[str] = None
+
+
+# --- Modelos de Mantenimiento y Seguimiento ---
+class MantenimientoBase(BaseModel):
+    equipo_id: int
+    tipo: str = "preventivo"
+    prioridad: str = "media"
+    estado: Optional[str] = "programado"
+    fecha_programada: date
+    tecnico_responsable: str
+    costo_estimado: Optional[float] = 0.0
+    descripcion_problema: str
+    diagnostico_solucion: Optional[str] = None
+    piezas_reemplazadas: Optional[str] = None
+
+class MantenimientoCreate(MantenimientoBase):
+    pass
+
+class MantenimientoUpdate(BaseModel):
+    tipo: Optional[str] = None
+    prioridad: Optional[str] = None
+    estado: Optional[str] = None
+    fecha_programada: Optional[date] = None
+    fecha_completada: Optional[date] = None
+    tecnico_responsable: Optional[str] = None
+    costo_estimado: Optional[float] = None
+    descripcion_problema: Optional[str] = None
+    diagnostico_solucion: Optional[str] = None
+    piezas_reemplazadas: Optional[str] = None
+
+class MantenimientoResponse(MantenimientoBase):
+    id: int
+    codigo_orden: str
+    fecha_completada: Optional[date] = None
+    created_at: Optional[datetime] = None
+    equipo: Optional[EquipoResponse] = None
+
+    class Config:
+        from_attributes = True
 

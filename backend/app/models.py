@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Date, func
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -60,6 +60,7 @@ class EquipoModel(Base):
 
     ubicacion = relationship("UbicacionModel", back_populates="equipos")
     codigo_qr = relationship("CodigoQRModel", back_populates="equipo", uselist=False, cascade="all, delete-orphan")
+    mantenimientos = relationship("MantenimientoModel", back_populates="equipo", cascade="all, delete-orphan")
 
 
 class CodigoQRModel(Base):
@@ -73,3 +74,26 @@ class CodigoQRModel(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     equipo = relationship("EquipoModel", back_populates="codigo_qr")
+
+
+class MantenimientoModel(Base):
+    __tablename__ = "mantenimientos"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    codigo_orden = Column(String(50), unique=True, nullable=False, index=True)
+    equipo_id = Column(Integer, ForeignKey("equipos.id", ondelete="CASCADE"), nullable=False)
+    tipo = Column(String(50), nullable=False, default="preventivo")  # preventivo, correctivo, calibracion, limpieza
+    prioridad = Column(String(50), nullable=False, default="media")  # urgente, alta, media, baja
+    estado = Column(String(50), nullable=False, default="programado")  # programado, en_proceso, completado, cancelado
+    fecha_programada = Column(Date, nullable=False)
+    fecha_completada = Column(Date, nullable=True)
+    tecnico_responsable = Column(String(120), nullable=False)
+    costo_estimado = Column(Float, nullable=True, default=0.0)
+    descripcion_problema = Column(Text, nullable=False)
+    diagnostico_solucion = Column(Text, nullable=True)
+    piezas_reemplazadas = Column(String(255), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    equipo = relationship("EquipoModel", back_populates="mantenimientos")
+

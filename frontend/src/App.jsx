@@ -25,6 +25,7 @@ import { Inventario } from './pages/Inventario';
 import { NuevoEquipo } from './pages/NuevoEquipo';
 import { Usuarios } from './pages/Usuarios';
 import { Perfil } from './pages/Perfil';
+import { Mantenimientos } from './pages/Mantenimientos';
 import { FichaPublicaQR } from './pages/FichaPublicaQR';
 import { EscanerQR } from './pages/EscanerQR';
 
@@ -112,6 +113,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Inventario />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mantenimientos"
+                element={
+                  <ProtectedRoute>
+                    <Mantenimientos />
                   </ProtectedRoute>
                 }
               />

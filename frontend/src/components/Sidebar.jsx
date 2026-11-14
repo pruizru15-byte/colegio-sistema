@@ -29,7 +29,7 @@ export const Sidebar = ({ collapsed = false, toggleSidebar }) => {
     { label: 'Usuarios', path: '/usuarios', icon: Users },
     { label: 'Ubicaciones', path: '/inventario', icon: MapPin },
     { label: 'Códigos QR', path: '/escaner', icon: QrCode },
-    { label: 'Mantenimientos', path: '/inventario', icon: Wrench },
+    { label: 'Mantenimientos', path: '/mantenimientos', icon: Wrench },
     { label: 'Reportes', path: '/inventario', icon: BarChart3 },
     { label: 'Configuración', path: '/perfil', icon: Settings },
   ];
