@@ -34,7 +34,12 @@ export const EscanerQR = () => {
 
   // Estados del Escáner
   const [codigoManual, setCodigoManual] = useState('');
-  const [scannerActivo, setScannerActivo] = useState(true);
+  const html5QrCodeRef = useRef(null);
+  const [camaraIniciada, setCamaraIniciada] = useState(false);
+  const [camaraCargando, setCamaraCargando] = useState(false);
+  const [errorCamara, setErrorCamara] = useState('');
+  const [camaras, setCamaras] = useState([]);
+  const [camaraSeleccionada, setCamaraSeleccionada] = useState('');
   const [historialEscaneos, setHistorialEscaneos] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('historial_qr_escaneos') || '[]');
@@ -89,44 +94,118 @@ export const EscanerQR = () => {
     cargarDatosQR();
   }, []);
 
-  // Inicializar escáner de cámara
-  useEffect(() => {
-    let scanner = null;
-    if (tabActiva === 'escaner' && scannerActivo) {
-      try {
-        scanner = new Html5QrcodeScanner(
-          'qr-reader',
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          /* verbose= */ false
-        );
+  // Iniciar la cámara de forma directa y nativa
+  const activarCamara = async (dispositivoId = null) => {
+    try {
+      setCamaraCargando(true);
+      setErrorCamara('');
 
-        scanner.render(
-          (decodedText) => {
-            let hash = decodedText;
-            if (decodedText.includes('/ficha/')) {
-              hash = decodedText.split('/ficha/')[1];
-            }
-            registrarEscaneo(hash);
-            scanner.clear();
-            navigate(`/ficha/${hash}`);
-          },
-          (error) => {
-            // escaneo continuo
+      // Detener y limpiar instancia previa si existe
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
           }
-        );
+          await html5QrCodeRef.current.clear();
+        } catch (e) {
+          console.warn('Deteniendo instancia previa:', e);
+        }
+      }
+
+      // Solicitar permisos de cámara al navegador de forma explícita
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { ideal: 'environment' } } 
+          });
+          testStream.getTracks().forEach(t => t.stop());
+        } catch (permErr) {
+          console.warn('Esperando permiso del navegador...', permErr);
+        }
+      }
+
+      // Listar cámaras físicas disponibles
+      let devices = [];
+      try {
+        devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setCamaras(devices);
+        }
+      } catch (devErr) {
+        console.warn('No se pudieron listar cámaras adicionales:', devErr);
+      }
+
+      // Inicializar Html5Qrcode en el contenedor #qr-reader
+      const html5QrCode = new Html5Qrcode('qr-reader');
+      html5QrCodeRef.current = html5QrCode;
+
+      const targetCamera = dispositivoId || (devices.length > 0 ? devices[0].id : { facingMode: 'environment' });
+
+      const qrConfig = {
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+      };
+
+      await html5QrCode.start(
+        targetCamera,
+        qrConfig,
+        (decodedText) => {
+          let hash = decodedText;
+          if (decodedText.includes('/ficha/')) {
+            hash = decodedText.split('/ficha/')[1];
+          }
+          registrarEscaneo(hash);
+          html5QrCode.stop().then(() => {
+            navigate(`/ficha/${hash}`);
+          }).catch(() => {
+            navigate(`/ficha/${hash}`);
+          });
+        },
+        () => {
+          // Frame sin QR
+        }
+      );
+
+      setCamaraIniciada(true);
+      if (typeof targetCamera === 'string') {
+        setCamaraSeleccionada(targetCamera);
+      }
+    } catch (err) {
+      console.error('Error al iniciar cámara:', err);
+      setErrorCamara(
+        err?.message?.includes('Permission') || err?.name === 'NotAllowedError'
+          ? 'Permiso de cámara denegado. Permite el acceso a la cámara en tu navegador.'
+          : 'No se pudo iniciar la cámara web. Asegúrate de tener una cámara conectada y dar permiso al navegador.'
+      );
+      setCamaraIniciada(false);
+    } finally {
+      setCamaraCargando(false);
+    }
+  };
+
+  const apagarCamara = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
       } catch (e) {
-        console.warn('No se pudo inicializar la cámara:', e);
+        console.warn('Error al detener cámara:', e);
       }
     }
+    setCamaraIniciada(false);
+  };
 
+  // Activar la cámara automáticamente al ingresar a la pestaña Escáner
+  useEffect(() => {
+    if (tabActiva === 'escaner') {
+      activarCamara();
+    }
     return () => {
-      if (scanner) {
-        try {
-          scanner.clear();
-        } catch (e) {}
-      }
+      apagarCamara();
     };
-  }, [tabActiva, scannerActivo, navigate]);
+  }, [tabActiva]);
 
   // Guardar en historial de escaneos
   const registrarEscaneo = (hash) => {
@@ -207,14 +286,16 @@ export const EscanerQR = () => {
         <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Cámara Óptica</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${camaraIniciada ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
               <Camera className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 tracking-tight">
-            {scannerActivo ? '10 FPS' : 'Pausada'}
+            {camaraIniciada ? 'En Vivo' : 'Inactiva'}
           </div>
-          <div className="text-[11px] text-slate-500 font-semibold mt-0.5">Enfoque y detección HD</div>
+          <div className={`text-[11px] font-semibold mt-0.5 ${camaraIniciada ? 'text-emerald-600' : 'text-slate-400'}`}>
+            {camaraIniciada ? 'Detección a 15 FPS' : 'Haz clic en habilitar'}
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition">
@@ -315,44 +396,123 @@ export const EscanerQR = () => {
             
             {/* Visor de Cámara */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden p-6 relative">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <div className={`p-2 rounded-xl ${camaraIniciada ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                     <Camera className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">Cámara en Tiempo Real</h3>
+                    <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span>Cámara en Tiempo Real</span>
+                      {camaraIniciada && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                          En Vivo
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-[11px] text-slate-400">Apunta el lente directamente al código QR del equipo</p>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setScannerActivo(!scannerActivo)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-                    scannerActivo 
-                      ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' 
-                      : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  {scannerActivo ? 'Apagar Cámara' : 'Encender Cámara'}
-                </button>
+                <div className="flex items-center gap-2">
+                  {camaras.length > 1 && camaraIniciada && (
+                    <select
+                      value={camaraSeleccionada}
+                      onChange={(e) => activarCamara(e.target.value)}
+                      className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                    >
+                      {camaras.map(c => (
+                        <option key={c.id} value={c.id}>{c.label || 'Cámara ' + c.id.slice(0, 4)}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {camaraIniciada ? (
+                    <button
+                      onClick={apagarCamara}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center gap-1.5"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      Apagar Cámara
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => activarCamara()}
+                      disabled={camaraCargando}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition flex items-center gap-1.5"
+                    >
+                      <Camera className="w-4 h-4" />
+                      {camaraCargando ? 'Iniciando...' : 'Habilitar Cámara'}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {scannerActivo ? (
-                <div id="qr-reader" className="w-full rounded-2xl overflow-hidden shadow-inner"></div>
-              ) : (
-                <div className="py-20 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <Camera className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs text-slate-500 font-semibold">Cámara pausada</p>
+              {/* Mensaje de aviso/instrucciones si la cámara requiere permiso */}
+              {errorCamara && (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-2xl mb-4 space-y-2">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span>Permiso de acceso a la cámara requerido</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-700">
+                    {errorCamara}
+                  </p>
                   <button
-                    onClick={() => setScannerActivo(true)}
-                    className="mt-3 px-4 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow"
+                    onClick={() => activarCamara()}
+                    className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-2xs"
                   >
-                    Reanudar
+                    Reintentar Conexión
                   </button>
                 </div>
               )}
+
+              {/* Contenedor del Lector QR */}
+              <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 min-h-[300px] flex items-center justify-center">
+                
+                {/* Elemento donde html5-qrcode inyecta el stream de video */}
+                <div 
+                  id="qr-reader" 
+                  className={`w-full ${camaraIniciada ? 'block' : 'hidden'}`}
+                ></div>
+
+                {/* Si la cámara está activa, superponer línea láser guía */}
+                {camaraIniciada && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-64 h-64 border-2 border-dashed border-sky-400/70 rounded-3xl relative overflow-hidden">
+                      <div className="w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#38bdf8] animate-pulse"></div>
+                      <div className="absolute bottom-2 inset-x-0 text-center text-[10px] text-white/70 font-semibold uppercase tracking-wider">
+                        Alinear QR en el marco
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Si la cámara no está activa, mostrar pantalla de inicio con botón explícito */}
+                {!camaraIniciada && (
+                  <div className="p-8 text-center text-white space-y-3">
+                    <div className="w-16 h-16 rounded-3xl bg-white/10 text-sky-400 flex items-center justify-center mx-auto backdrop-blur-md border border-white/10 shadow-inner">
+                      <Camera className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Lector de Cámara Web / Móvil</h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                        Para escanear códigos impresos en computadoras, laptops o proyectores, habilita la cámara de tu equipo.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => activarCamara()}
+                      disabled={camaraCargando}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30 inline-flex items-center gap-2 transition transform hover:scale-105 cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4" />
+                      {camaraCargando ? 'Habilitando...' : 'Habilitar Cámara Ahora'}
+                    </button>
+                  </div>
+                )}
+
+              </div>
             </div>
 
             {/* Alternativa: Subir Foto o Captura de Pantalla de QR */}
