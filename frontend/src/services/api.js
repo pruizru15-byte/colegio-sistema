@@ -84,3 +84,4 @@ export const getFichaQRApi = async (codigoHash) => {
 };
 
 export default api;
+

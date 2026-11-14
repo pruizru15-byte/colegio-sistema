@@ -15,7 +15,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
+import { ThemeProvider } from './context/ThemeContext';
+import { Sidebar } from './components/Sidebar';
+import { TopHeader } from './components/TopHeader';
+
+import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Inventario } from './pages/Inventario';
 import { NuevoEquipo } from './pages/NuevoEquipo';
@@ -24,63 +28,101 @@ import { EscanerQR } from './pages/EscanerQR';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="text-center py-20 text-slate-500">Cargando sesión...</div>;
+  if (loading) return <div className="text-center py-20 text-slate-500 text-xs">Cargando sesión...</div>;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 };
 
 const AdminRoute = ({ children }) => {
   const { user, isAdmin, loading } = useAuth();
-  if (loading) return <div className="text-center py-20 text-slate-500">Cargando sesión...</div>;
+  if (loading) return <div className="text-center py-20 text-slate-500 text-xs">Cargando sesión...</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/inventario" replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return children;
 };
 
-const Layout = ({ children }) => {
+const AppLayout = ({ children }) => {
   const location = useLocation();
-  const hideNavbar = location.pathname === '/login';
+  const isAuthPage = location.pathname === '/login';
+  const isPublicFicha = location.pathname.startsWith('/ficha/');
+
+  if (isAuthPage || isPublicFicha) {
+    return <main className="min-h-screen bg-slate-50">{children}</main>;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      {!hideNavbar && <Navbar />}
-      <main className="flex-1">{children}</main>
-      <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
-        © 2026 Sistema de Inventario Tecnológico con Códigos QR • Colegio
-      </footer>
+    <div className="flex min-h-screen bg-[#f8fafc] text-slate-800">
+      {/* Barra Lateral Navegación (Izquierda) */}
+      <Sidebar />
+
+      {/* Área Principal (Cabecera Superior + Contenido) */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopHeader />
+        <main className="flex-1 p-6 overflow-y-auto max-w-[1600px] w-full mx-auto">
+          {children}
+        </main>
+        <footer className="px-6 py-3 border-t border-slate-200 text-center text-[11px] text-slate-400 bg-white">
+          Sistema de Inventario Tecnológico con Códigos QR • Institución Educativa UCV
+        </footer>
+      </div>
     </div>
   );
 };
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/inventario"
-              element={
-                <ProtectedRoute>
-                  <Inventario />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/equipos/nuevo"
-              element={
-                <AdminRoute>
-                  <NuevoEquipo />
-                </AdminRoute>
-              }
-            />
-            <Route path="/escaner" element={<EscanerQR />} />
-            <Route path="/ficha/:codigo_hash" element={<FichaPublicaQR />} />
-            <Route path="*" element={<Navigate to="/inventario" replace />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppLayout>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inventario"
+                element={
+                  <ProtectedRoute>
+                    <Inventario />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/equipos/nuevo"
+                element={
+                  <AdminRoute>
+                    <NuevoEquipo />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/escaner"
+                element={
+                  <ProtectedRoute>
+                    <EscanerQR />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/ficha/:codigo_hash" element={<FichaPublicaQR />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </AppLayout>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

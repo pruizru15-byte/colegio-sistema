@@ -408,3 +408,4 @@ export const Inventario = () => {
     </div>
   );
 };
+

@@ -18,6 +18,7 @@ from app.config import settings
 from app.controllers.auth_controller import router as auth_router
 from app.controllers.equipo_controller import router as equipo_router
 from app.controllers.qr_controller import router as qr_router
+from app.controllers.dashboard_controller import router as dashboard_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(equipo_router, prefix="/api")
 app.include_router(qr_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
 
 @app.get("/health", tags=["Salud del Sistema"])
 def health_check():
@@ -50,3 +52,4 @@ def root():
         "docs": "/docs",
         "version": "1.0.0"
     }
+
