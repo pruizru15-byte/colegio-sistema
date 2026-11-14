@@ -1,0 +1,18 @@
+# Entorno y Secretos
+.env
+__pycache__/
+*.pyc
+*.pyo
+
+# Dependencias y compilados
+node_modules/
+dist/
+.vite/
+
+# Base de datos y logs
+*.log
+mysql_data/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

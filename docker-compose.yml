@@ -1,0 +1,102 @@
+# Copyright (c) 2026 MyCompany LLC
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  # 1. Base de datos relacional MySQL 8.0
+  db:
+    image: mysql:8.0
+    container_name: colegio_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secure_pass_2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-colegio_inventario}
+      MYSQL_USER: ${MYSQL_USER:-colegio_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-colegio_secure_pass_2026}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - colegio_net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 8s
+      timeout: 5s
+      retries: 6
+
+  # 2. Backend API REST (FastAPI + SQLAlchemy + Generador QR)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: colegio_backend
+    restart: always
+    environment:
+      DB_USER: ${MYSQL_USER:-colegio_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-colegio_secure_pass_2026}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE:-colegio_inventario}
+      SECRET_KEY: ${SECRET_KEY:-colegio_jwt_secret_key_super_segura_2026}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - colegio_net
+
+  # 3. Frontend SPA (React + Vite + TailwindCSS + Lector QR)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: colegio_frontend
+    restart: always
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - colegio_net
+
+  # 4. Gestor visual de base de datos para pruebas
+  adminer:
+    image: adminer:latest
+    container_name: colegio_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - colegio_net
+
+volumes:
+  mysql_data:
+    name: colegio_mysql_data
+
+networks:
+  colegio_net:
+    name: colegio_network
+    driver: bridge
