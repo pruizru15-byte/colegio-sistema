@@ -65,5 +65,19 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    return {
+      user: null,
+      token: null,
+      loading: false,
+      login: async () => {},
+      logout: () => {},
+      updateUser: () => {},
+      isAdmin: false
+    };
+  }
+  return context;
+};
 
