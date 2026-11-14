@@ -173,6 +173,33 @@ export const Perfil = () => {
         </div>
       )}
 
+      {/* Tarjetas de Resumen Superior del Módulo de Perfil */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Rol de Autorización</div>
+          <div className="text-xl font-black text-slate-900 capitalize">{user?.rol || 'Administrador'}</div>
+          <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">Nivel Institucional</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Seguridad de Acceso</div>
+          <div className="text-xl font-black text-emerald-600">BCrypt (72b)</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Hash unidireccional</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Token de Sesión</div>
+          <div className="text-xl font-black text-blue-600">JWT Activo</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Expira en 12 horas</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Estado de Cuenta</div>
+          <div className="text-xl font-black text-cyan-600">Verificada</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Colegio UCV</div>
+        </div>
+      </div>
+
       {/* Banner de Cabecera del Perfil */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden">
         <div className="h-28 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 relative">

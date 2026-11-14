@@ -71,16 +71,45 @@ export const EscanerQR = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-8">
-      <div className="text-center mb-6">
-        <div className="inline-flex p-3 bg-blue-50 text-blue-600 rounded-2xl mb-2">
-          <ScanLine className="w-8 h-8" />
+    <div className="max-w-3xl mx-auto space-y-6">
+      
+      {/* Tarjetas de Resumen Superior del Módulo QR */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Modo de Lectura</div>
+          <div className="text-xl font-black text-slate-900">Cámara Activa</div>
+          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Detección a 10 FPS</div>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">Escanear Código QR</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Apunta la cámara al código QR impreso en el equipo o ingresa el código hash.
-        </p>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Ingreso Manual</div>
+          <div className="text-xl font-black text-blue-600">Por Código Hash</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Acceso sin cámara</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Ficha Técnica</div>
+          <div className="text-xl font-black text-indigo-600">Instantánea</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Ubicación y estado</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Acceso Escolar</div>
+          <div className="text-xl font-black text-cyan-600">Público</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Para alumnos y docentes</div>
+        </div>
       </div>
+
+      <div className="max-w-xl mx-auto">
+        <div className="text-center mb-6">
+          <div className="inline-flex p-3 bg-blue-50 text-blue-600 rounded-2xl mb-2 shadow-2xs">
+            <ScanLine className="w-7 h-7" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900">Escanear Código QR</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Apunta la cámara al código QR impreso en el equipo o ingresa el código hash.
+          </p>
+        </div>
 
       {/* Visor de Cámara */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden p-6 mb-6">

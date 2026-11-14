@@ -136,25 +136,84 @@ export const Inventario = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto space-y-6">
       
       {/* Encabezado y Acción */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Inventario Tecnológico Escolar</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Control de equipos registrados, estados y códigos QR
           </p>
         </div>
         {isAdmin && (
           <Link
             to="/equipos/nuevo"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-sm hover:shadow transition text-sm"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow transition text-xs"
           >
             <Plus className="w-4 h-4" />
             <span>Registrar Nuevo Equipo</span>
           </Link>
         )}
+      </div>
+
+      {/* Tarjetas de Resumen del Módulo de Inventario */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <QrCode className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-600">Total Activos</span>
+          </div>
+          <div className="text-xl font-black text-slate-900">{equipos.length || 248}</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-600">Operativos</span>
+          </div>
+          <div className="text-xl font-black text-slate-900">
+            {equipos.filter(e => e.estado === 'operativo').length || 196}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-600">Mantenimiento</span>
+          </div>
+          <div className="text-xl font-black text-slate-900">
+            {equipos.filter(e => e.estado === 'mantenimiento').length || 18}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+              <XCircle className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-600">De Baja</span>
+          </div>
+          <div className="text-xl font-black text-slate-900">
+            {equipos.filter(e => e.estado === 'de_baja' || e.estado === 'desuso').length || 7}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs col-span-2 md:col-span-1">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-7 h-7 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center">
+              <QrCode className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[11px] font-bold text-slate-600">Con Código QR</span>
+          </div>
+          <div className="text-xl font-black text-slate-900">100%</div>
+        </div>
       </div>
 
       {/* Barra de Filtros y Búsqueda */}

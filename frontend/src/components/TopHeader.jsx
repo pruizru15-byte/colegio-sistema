@@ -16,14 +16,15 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Laptop, Search, Bell, Sun, Moon, LaptopMinimal, 
-  ChevronDown, Check, User, LogOut, Settings, ShieldCheck
+  ChevronDown, Check, User, LogOut, Settings, ShieldCheck,
+  PanelLeftClose, PanelLeft, Menu
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { NotificationModal } from './NotificationModal';
 import { SearchModal } from './SearchModal';
 
-export const TopHeader = ({ notifications = [] }) => {
+export const TopHeader = ({ notifications = [], toggleSidebar, isSidebarCollapsed = false }) => {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -46,9 +47,23 @@ export const TopHeader = ({ notifications = [] }) => {
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3 shadow-xs">
       <div className="flex items-center justify-between gap-4">
         
-        {/* Título y Subtítulo Institucional */}
+        {/* Título y Subtítulo Institucional + Toggle Sidebar */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-sm">
+          {toggleSidebar && (
+            <button
+              onClick={toggleSidebar}
+              title={isSidebarCollapsed ? "Desplegar menú lateral" : "Plegar menú lateral"}
+              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeft className="w-4 h-4 text-blue-600" />
+              ) : (
+                <PanelLeftClose className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
+          )}
+
+          <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-sm flex-shrink-0">
             <Laptop className="w-5 h-5" />
           </div>
           <div>

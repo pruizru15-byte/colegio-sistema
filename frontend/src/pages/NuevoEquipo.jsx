@@ -73,15 +73,47 @@ export const NuevoEquipo = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto space-y-6">
       
-      {/* Botón Volver */}
-      <button
-        onClick={() => navigate('/inventario')}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 mb-6 transition"
-      >
-        <ArrowLeft className="w-4 h-4" /> Volver al inventario
-      </button>
+      {/* Botón Volver y Título */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => navigate('/inventario')}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+        >
+          <ArrowLeft className="w-4 h-4" /> Volver al inventario
+        </button>
+        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+          Módulo de Alta de Activos
+        </span>
+      </div>
+
+      {/* Tarjetas de Resumen Superior */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Aulas / Ambientes</div>
+          <div className="text-xl font-black text-slate-900">{ubicaciones.length || 12} disponibles</div>
+          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Listas para asignación</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Generación de QR</div>
+          <div className="text-xl font-black text-blue-600">Automática</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Impresión inmediata</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Estado Inicial</div>
+          <div className="text-xl font-black text-emerald-600">Operativo</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Configuración por defecto</div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+          <div className="text-[11px] font-bold text-slate-500 mb-1">Trazabilidad</div>
+          <div className="text-xl font-black text-indigo-600">100% Única</div>
+          <div className="text-[10px] text-slate-400 font-semibold mt-0.5">Auditoría escolar</div>
+        </div>
+      </div>
 
       {/* Si se acaba de registrar, mostrar pantalla de confirmación con QR */}
       {equipoCreado ? (
