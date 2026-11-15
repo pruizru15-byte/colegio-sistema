@@ -19,11 +19,12 @@ import {
   ScanLine, Camera, ArrowRight, AlertCircle, QrCode, 
   Printer, Download, Upload, Search, CheckCircle2, 
   Sparkles, RefreshCw, Smartphone, Eye, ExternalLink,
-  Laptop, MapPin, Building2, Layers, HelpCircle
+  Laptop, MapPin, Building2, Layers, HelpCircle, SwitchCamera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../services/api';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = API_BASE_URL;
 
 export const EscanerQR = () => {
   const navigate = useNavigate();
@@ -110,7 +111,7 @@ export const EscanerQR = () => {
       setCamaraCargando(true);
       setErrorCamara('');
 
-      // Detener y limpiar instancia previa si existe
+      // 1. Detener de forma segura cualquier escaneo activo previo
       if (html5QrCodeRef.current) {
         try {
           if (html5QrCodeRef.current.isScanning) {
@@ -118,36 +119,20 @@ export const EscanerQR = () => {
           }
           await html5QrCodeRef.current.clear();
         } catch (e) {
-          console.warn('Deteniendo instancia previa:', e);
+          console.warn('Limpiando escáner previo:', e);
         }
+        html5QrCodeRef.current = null;
       }
 
       // Asegurar que el estado indique cámara activa para que el contenedor esté en el DOM
       setCamaraIniciada(true);
 
-      // Esperar brevemente a que React pinte el contenedor #qr-reader
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Esperar 150ms a que React monte el contenedor #qr-reader
+      await new Promise(resolve => setTimeout(resolve, 150));
 
-      // 1. Sondeo previo con getUserMedia nativo para que el navegador desbloquee las etiquetas reales de hardware
-      let streamSondeo = null;
-      try {
-        streamSondeo = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
-        });
-      } catch (errFacing) {
-        try {
-          streamSondeo = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (errGen) {
-          console.warn('Sondeo previo de cámara:', errGen);
-        }
-      }
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // Detener inmediatamente pistas del sondeo para no bloquear el hardware
-      if (streamSondeo) {
-        streamSondeo.getTracks().forEach(t => t.stop());
-      }
-
-      // 2. Listar todas las cámaras físicas disponibles con etiquetas ya legibles
+      // 2. Obtener lista inicial de cámaras si ya hay permiso o mediante getCameras
       let devices = [];
       try {
         devices = await Html5Qrcode.getCameras();
@@ -155,25 +140,32 @@ export const EscanerQR = () => {
           setCamaras(devices);
         }
       } catch (devErr) {
-        console.warn('Búsqueda de dispositivos:', devErr);
+        console.warn('Consulta de dispositivos inicial:', devErr);
       }
 
       // 3. Determinar la cámara idónea evitando cámaras virtuales (OBS/DroidCam) que transmiten cuadros negros
       let targetCamera = dispositivoId;
       if (!targetCamera && devices && devices.length > 0) {
-        // Filtrar cámaras que NO sean virtuales
+        // Filtrar cámaras que NO sean virtuales (OBS, DroidCam, etc.)
         const camarasFisicas = devices.filter(d => 
           d.label && !/virtual|obs|droidcam|vysor|manycam|iriun|splitcam/i.test(d.label)
         );
+        const listaUso = camarasFisicas.length > 0 ? camarasFisicas : devices;
 
-        // En móviles o tablets, preferir cámara trasera
-        const backCam = camarasFisicas.find(d => 
-          d.label && /back|rear|trasera|ambiente|environment/i.test(d.label)
-        );
-
-        // Seleccionar: trasera física > física integrada/USB > primera detectada
-        const camaraOptima = backCam || camarasFisicas[0] || devices[0];
-        if (camaraOptima) {
+        if (isMobile) {
+          // En móviles o tablets, preferir cámara trasera
+          const backCam = listaUso.find(d => 
+            d.label && /back|rear|trasera|ambiente|environment/i.test(d.label)
+          );
+          const camaraOptima = backCam || listaUso[0];
+          targetCamera = camaraOptima.id;
+          setCamaraSeleccionada(camaraOptima.id);
+        } else {
+          // En laptops / PC escritorio, preferir cámara web integrada o USB (NO trasera ficticia)
+          const frontCam = listaUso.find(d => 
+            d.label && /integrated|webcam|internal|usb|front|facetime|cam/i.test(d.label)
+          );
+          const camaraOptima = frontCam || listaUso[0];
           targetCamera = camaraOptima.id;
           setCamaraSeleccionada(camaraOptima.id);
         }
@@ -181,9 +173,11 @@ export const EscanerQR = () => {
         setCamaraSeleccionada(dispositivoId);
       }
 
-      // Si aún no hay cámara por id, solicitar por facingMode
+      // Si aún no hay cámara por ID exacto:
+      // Móvil -> environment (trasera)
+      // PC / Laptop -> user (frontal / webcam integrada)
       if (!targetCamera) {
-        targetCamera = { facingMode: 'environment' };
+        targetCamera = isMobile ? { facingMode: 'environment' } : { facingMode: 'user' };
       }
 
       // 4. Inicializar Html5Qrcode en el contenedor #qr-reader
@@ -191,11 +185,11 @@ export const EscanerQR = () => {
       html5QrCodeRef.current = html5QrCode;
 
       const qrConfig = {
-        fps: 20,
+        fps: 15,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const edge = Math.floor(minEdge * 0.75);
-          return { width: Math.max(edge, 220), height: Math.max(edge, 220) };
+          const edge = Math.floor(minEdge * 0.72);
+          return { width: Math.max(edge, 200), height: Math.max(edge, 200) };
         },
       };
 
@@ -217,13 +211,19 @@ export const EscanerQR = () => {
         }
       };
 
-      // 5. Iniciar con la cámara seleccionada y fallback
+      // 5. Iniciar con la cámara seleccionada y fallback automático
       try {
         await html5QrCode.start(targetCamera, qrConfig, onScanSuccess, () => {});
       } catch (errFirst) {
-        console.warn('Primer intento de inicio de cámara falló, intentando con facingMode "user":', errFirst);
-        // Fallback a cámara frontal / genérica de laptop
-        await html5QrCode.start({ facingMode: 'user' }, qrConfig, onScanSuccess, () => {});
+        console.warn('Primer intento falló, ejecutando fallback:', errFirst);
+        // Fallback: probar facingMode opuesto
+        const fallbackConstraint = isMobile ? { facingMode: 'user' } : { facingMode: 'user' };
+        try {
+          await html5QrCode.start(fallbackConstraint, qrConfig, onScanSuccess, () => {});
+        } catch (errSecond) {
+          console.warn('Segundo intento falló, probando fallback genérico:', errSecond);
+          await html5QrCode.start({ facingMode: 'environment' }, qrConfig, onScanSuccess, () => {});
+        }
       }
 
       // Con el permiso ya concedido, refrescar lista actualizada de cámaras
@@ -530,7 +530,7 @@ export const EscanerQR = () => {
 
                 <div className="flex items-center flex-wrap gap-2">
                   {/* Selector de cámara física con etiquetas reales */}
-                  {camaras.length > 0 && (
+                  {camaras.length > 0 ? (
                     <div className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 transition rounded-xl px-2.5 py-1.5 border border-slate-200">
                       <Camera className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                       <select
@@ -547,11 +547,29 @@ export const EscanerQR = () => {
                           const isVirtual = /virtual|obs|droidcam|vysor/i.test(c.label || '');
                           return (
                             <option key={c.id} value={c.id}>
-                              {c.label ? `${c.label}${isVirtual ? ' (Virtual)' : ''}` : `Cámara ${idx + 1}`}
+                              {c.label ? `${c.label}${isVirtual ? ' (⚠️ OBS / Virtual)' : ''}` : `Cámara ${idx + 1}`}
                             </option>
                           );
                         })}
                       </select>
+                    </div>
+                  ) : (
+                    /* Selector rápido de orientación si aún no se listan nombres */
+                    <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1 border border-slate-200 text-xs">
+                      <button
+                        onClick={() => activarCamara('user')}
+                        className="px-2 py-1 rounded-lg font-semibold text-slate-700 hover:bg-white transition"
+                        title="Forzar cámara frontal / de laptop"
+                      >
+                        Frontal/Laptop
+                      </button>
+                      <button
+                        onClick={() => activarCamara('environment')}
+                        className="px-2 py-1 rounded-lg font-semibold text-slate-700 hover:bg-white transition"
+                        title="Forzar cámara trasera"
+                      >
+                        Trasera
+                      </button>
                     </div>
                   )}
 
@@ -569,7 +587,7 @@ export const EscanerQR = () => {
                       title="Alternar entre cámaras detectadas"
                       className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 cursor-pointer"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      <SwitchCamera className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Alternar</span>
                     </button>
                   )}
@@ -635,6 +653,35 @@ export const EscanerQR = () => {
                   </div>
                 )}
 
+                {/* Barra flotante informativa cuando la cámara está transmitiendo */}
+                {camaraIniciada && !camaraCargando && (
+                  <div className="absolute top-3 inset-x-3 flex items-center justify-between z-20 pointer-events-auto">
+                    <div className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-semibold text-white/90 flex items-center gap-1.5 shadow-sm max-w-[70%] truncate">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping flex-shrink-0"></span>
+                      <span className="truncate">
+                        {camaras.find(c => c.id === camaraSeleccionada)?.label || 'Cámara Web Activa'}
+                      </span>
+                    </div>
+
+                    {camaras.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const curIdx = camaras.findIndex(c => c.id === camaraSeleccionada);
+                          const nextCam = camaras[(curIdx + 1) % camaras.length];
+                          if (nextCam) {
+                            setCamaraSeleccionada(nextCam.id);
+                            activarCamara(nextCam.id);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-[10px] font-bold text-white transition flex items-center gap-1 cursor-pointer border border-white/20"
+                      >
+                        <SwitchCamera className="w-3 h-3" />
+                        <span>Cambiar Lente</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Indicador mientras la cámara se inicializa */}
                 {camaraCargando && (
                   <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-30 text-white">
@@ -667,6 +714,22 @@ export const EscanerQR = () => {
                 )}
 
               </div>
+
+              {/* Aviso rápido para solucionar pantalla negra */}
+              {camaraIniciada && (
+                <div className="mt-2.5 px-3.5 py-2 rounded-xl bg-blue-50/80 border border-blue-200/80 text-[11px] text-blue-800 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <HelpCircle className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                    ¿La imagen se ve negra? Revisa la <strong>tapa física deslizante</strong> de tu laptop o cambia a otra cámara.
+                  </span>
+                  <button
+                    onClick={() => setMostrarAyudaCamara(prev => !prev)}
+                    className="text-blue-700 font-bold hover:underline whitespace-nowrap cursor-pointer text-[10px]"
+                  >
+                    {mostrarAyudaCamara ? 'Ocultar guía' : 'Ver solución (4 pasos)'}
+                  </button>
+                </div>
+              )}
 
               {/* Guía de Solución Rápida y Diagnóstico (si la cámara se ve negra) */}
               <div className="mt-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs">

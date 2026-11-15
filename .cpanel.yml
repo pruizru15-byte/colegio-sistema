@@ -1,0 +1,12 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/storage/popydev/public_html/sistema-colegio
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R frontend/dist/* $DEPLOYPATH/
+    - /bin/cp frontend/dist/.htaccess $DEPLOYPATH/.htaccess
+    - /bin/chmod 755 $DEPLOYPATH
+    - /bin/chmod -R 755 $DEPLOYPATH/assets
+    - /bin/mkdir -p $DEPLOYPATH/backend
+    - /bin/cp -R backend/* $DEPLOYPATH/backend/
+    - /bin/chmod 755 $DEPLOYPATH/backend

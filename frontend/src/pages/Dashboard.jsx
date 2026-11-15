@@ -15,6 +15,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/api';
 import { 
   Laptop, CheckCircle, Wrench, AlertTriangle, MapPin, QrCode, 
   Layers, Info, Landmark, BarChart2, TrendingUp, ChevronDown, 
@@ -37,7 +38,7 @@ export const Dashboard = () => {
   const fetchStats = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const res = await axios.get('http://localhost:8000/api/dashboard/stats');
+      const res = await axios.get(`${API_BASE_URL}/dashboard/stats`);
       setData(res.data);
     } catch (err) {
       console.error('Error cargando estadísticas del dashboard:', err);
@@ -53,7 +54,7 @@ export const Dashboard = () => {
 
   const handleBackup = async () => {
     try {
-      const res = await axios.post('http://localhost:8000/api/dashboard/backup');
+      const res = await axios.post(`${API_BASE_URL}/dashboard/backup`);
       setBackupToast(res.data);
       setTimeout(() => setBackupToast(null), 5000);
     } catch (e) {

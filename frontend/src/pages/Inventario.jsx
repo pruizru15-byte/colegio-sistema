@@ -19,7 +19,7 @@ import {
   getEquiposApi, getEquiposStatsApi, getEquipoHistorialApi, 
   createEquipoApi, updateEquipoApi, deleteEquipoApi, 
   getUbicacionesApi, getUsuariosApi, getPrestamosApi, 
-  createPrestamoApi, devolverPrestamoApi 
+  createPrestamoApi, devolverPrestamoApi, API_BASE_URL 
 } from '../services/api';
 import { 
   Search, Filter, QrCode, Edit2, Trash2, MapPin, 
@@ -1180,7 +1180,7 @@ export const Inventario = () => {
               {equipoRecienCreado.codigo_qr && (
                 <div className="bg-slate-50 p-6 rounded-2xl inline-block border border-slate-200">
                   <img
-                    src={`http://localhost:8000/api/qr/imagen/${equipoRecienCreado.codigo_qr.codigo_hash}`}
+                    src={`${API_BASE_URL}/qr/imagen/${equipoRecienCreado.codigo_qr.codigo_hash}`}
                     alt="QR"
                     className="w-48 h-48 mx-auto"
                   />
@@ -1633,7 +1633,7 @@ export const Inventario = () => {
             
             <div className="bg-slate-50 p-5 rounded-2xl inline-block border border-slate-200 mb-4 shadow-inner">
               <img
-                src={`http://localhost:8000/api/qr/imagen/${qrModalEquipo.codigo_qr.codigo_hash}`}
+                src={`${API_BASE_URL}/qr/imagen/${qrModalEquipo.codigo_qr.codigo_hash}`}
                 alt="QR Code"
                 className="w-48 h-48 mx-auto"
               />
@@ -1647,7 +1647,7 @@ export const Inventario = () => {
 
             <div className="flex gap-2">
               <a
-                href={`http://localhost:8000/api/qr/imagen/${qrModalEquipo.codigo_qr.codigo_hash}`}
+                href={`${API_BASE_URL}/qr/imagen/${qrModalEquipo.codigo_qr.codigo_hash}`}
                 download={`QR_${qrModalEquipo.codigo_patrimonial}.png`}
                 className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow transition"
               >

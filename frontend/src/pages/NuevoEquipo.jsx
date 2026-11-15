@@ -14,7 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createEquipoApi, getUbicacionesApi } from '../services/api';
+import { createEquipoApi, getUbicacionesApi, API_BASE_URL } from '../services/api';
 import { QrCode, ArrowLeft, CheckCircle, Printer, Plus, AlertCircle } from 'lucide-react';
 
 export const NuevoEquipo = () => {
@@ -129,7 +129,7 @@ export const NuevoEquipo = () => {
           <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
             {equipoCreado.codigo_qr ? (
               <img
-                src={`http://localhost:8000/api/qr/imagen/${equipoCreado.codigo_qr.codigo_hash}`}
+                src={`${API_BASE_URL}/qr/imagen/${equipoCreado.codigo_qr.codigo_hash}`}
                 alt="QR Code"
                 className="w-56 h-56 mx-auto mb-3"
               />
@@ -145,7 +145,7 @@ export const NuevoEquipo = () => {
           <div className="flex flex-col sm:flex-row justify-center gap-3">
             {equipoCreado.codigo_qr && (
               <a
-                href={`http://localhost:8000/api/qr/imagen/${equipoCreado.codigo_qr.codigo_hash}`}
+                href={`${API_BASE_URL}/qr/imagen/${equipoCreado.codigo_qr.codigo_hash}`}
                 download={`QR_${equipoCreado.codigo_patrimonial}.png`}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow"
               >

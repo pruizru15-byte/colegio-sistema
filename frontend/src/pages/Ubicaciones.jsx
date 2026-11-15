@@ -20,8 +20,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useSearchParams } from 'react-router-dom';
+import { API_BASE_URL } from '../services/api';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = API_BASE_URL;
 
 export const Ubicaciones = () => {
   const { token, isAdmin } = useAuth();
