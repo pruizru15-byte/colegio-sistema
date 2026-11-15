@@ -17,17 +17,16 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { 
   LayoutDashboard, Monitor, Users, MapPin, QrCode, 
   Wrench, BarChart3, Settings, GraduationCap, ChevronDown, 
-  ChevronRight, Laptop, Layers, Box, Plus, Share2, 
+  ChevronRight, ChevronLeft, Laptop, Layers, Box, Plus, Share2, 
   Camera, Printer, Smartphone, Building2, Clock, FileText, 
-  AlertTriangle, CheckCircle2, User as UserIcon, Lock, ShieldCheck, Sun, 
-  Calendar, Activity, Sparkles
+  AlertTriangle, CheckCircle2, User as UserIcon, Lock, ShieldCheck, Sun
 } from 'lucide-react';
 
-export const Sidebar = () => {
+export const Sidebar = ({ collapsed = false, toggleSidebar }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Estado de menús desplegables (acordeón para submódulos/pestañas)
+  // Estado de menús desplegables (acordeón para submódulos en modo expandido)
   const [expandedMenus, setExpandedMenus] = useState({
     '/inventario': true,
     '/escaner': false,
@@ -36,6 +35,9 @@ export const Sidebar = () => {
     '/reportes': false,
     '/perfil': false,
   });
+
+  // Menú en hover cuando la barra está plegada
+  const [hoveredMenu, setHoveredMenu] = useState(null);
 
   // Auto-desplegar el menú cuando el usuario navegue a esa ruta
   useEffect(() => {
@@ -165,13 +167,11 @@ export const Sidebar = () => {
   const isSubmoduleActive = (item, sub) => {
     if (location.pathname !== item.path) return false;
 
-    // Si tiene tab específica
     if (sub.tab !== undefined) {
       const currentTab = searchParams.get('tab') || item.defaultTab;
       return currentTab === sub.tab;
     }
 
-    // Si tiene query string personalizada (ej. estado=programado)
     if (sub.query !== undefined) {
       if (!sub.query) {
         return !searchParams.get('estado') && !searchParams.get('accion');
@@ -184,39 +184,70 @@ export const Sidebar = () => {
   };
 
   return (
-    <aside className="bg-[#09101d] text-slate-300 w-64 min-h-screen sticky top-0 h-screen overflow-y-auto flex flex-col justify-between border-r border-slate-800 flex-shrink-0 z-40 select-none shadow-xl">
+    <aside 
+      className={`bg-[#09101d] text-slate-300 min-h-screen sticky top-0 h-screen overflow-y-auto overflow-x-visible flex flex-col justify-between border-r border-slate-800 flex-shrink-0 z-40 select-none shadow-xl transition-all duration-300 relative ${
+        collapsed ? 'w-20' : 'w-64'
+      }`}
+    >
       
-      {/* 1. Cabecera y Marca Institucional Fija */}
+      {/* Botón Flotante para Plegar / Desplegar la barra lateral */}
+      {toggleSidebar && (
+        <button
+          onClick={toggleSidebar}
+          title={collapsed ? "Desplegar menú lateral" : "Plegar menú lateral"}
+          className="absolute -right-3.5 top-20 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg border-2 border-[#09101d] z-50 transition transform hover:scale-110 cursor-pointer"
+        >
+          {collapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <ChevronLeft className="w-4 h-4" />
+          )}
+        </button>
+      )}
+
+      {/* 1. Cabecera y Marca Institucional */}
       <div>
-        <div className="p-4 border-b border-slate-800/80 flex items-center gap-3">
+        <div className={`p-4 border-b border-slate-800/80 flex items-center transition-all ${
+          collapsed ? 'justify-center' : 'gap-3'
+        }`}>
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center p-2 shadow-lg shadow-blue-500/25 flex-shrink-0">
             <QrCode className="w-full h-full" />
           </div>
           
-          <div className="leading-tight overflow-hidden">
-            <div className="text-[11px] font-black uppercase tracking-wider text-sky-400 flex items-center gap-1">
-              <span>Inventario QR</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          {!collapsed && (
+            <div className="leading-tight overflow-hidden">
+              <div className="text-[11px] font-black uppercase tracking-wider text-sky-400 flex items-center gap-1">
+                <span>Inventario QR</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              </div>
+              <h2 className="text-xs font-black text-white tracking-tight">
+                Colegio UCV
+              </h2>
+              <p className="text-[10px] text-slate-400 font-medium">Control Tecnológico</p>
             </div>
-            <h2 className="text-xs font-black text-white tracking-tight">
-              Colegio UCV
-            </h2>
-            <p className="text-[10px] text-slate-400 font-medium">Control Tecnológico</p>
-          </div>
+          )}
         </div>
 
-        {/* Badge Institucional Fijo */}
-        <div className="px-4 pt-3 pb-1">
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-[11px] font-semibold text-slate-300">
-            <div className="flex items-center gap-1.5 truncate">
-              <GraduationCap className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
-              <span className="truncate">Sede Central</span>
+        {/* Badge Institucional */}
+        {!collapsed ? (
+          <div className="px-4 pt-3 pb-1">
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-[11px] font-semibold text-slate-300">
+              <div className="flex items-center gap-1.5 truncate">
+                <GraduationCap className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+                <span className="truncate">Sede Central</span>
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-sky-300">
+                Activo
+              </span>
             </div>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-sky-300">
-              Activo
-            </span>
           </div>
-        </div>
+        ) : (
+          <div className="px-2 pt-3 pb-1 flex justify-center">
+            <div className="p-2 rounded-xl bg-slate-800/40 text-sky-400" title="Institución Educativa UCV">
+              <GraduationCap className="w-4 h-4" />
+            </div>
+          </div>
+        )}
 
         {/* 2. Lista de Módulos con Desplegables de Submódulos */}
         <nav className="px-3 py-3 space-y-1">
@@ -224,14 +255,22 @@ export const Sidebar = () => {
             const Icon = item.icon;
             const active = isModuleActive(item.path);
             const hasSubmodules = item.submodules && item.submodules.length > 0;
-            const isExpanded = expandedMenus[item.path];
+            const isExpanded = !collapsed && expandedMenus[item.path];
+            const isHovered = collapsed && hoveredMenu === item.path;
 
             return (
-              <div key={idx} className="space-y-0.5">
+              <div 
+                key={idx} 
+                className="space-y-0.5 relative"
+                onMouseEnter={() => collapsed && setHoveredMenu(item.path)}
+                onMouseLeave={() => collapsed && setHoveredMenu(null)}
+              >
                 
                 {/* Botón / Enlace del Módulo Principal */}
                 <div
                   className={`group flex items-center justify-between rounded-xl text-xs font-semibold transition-all duration-150 ${
+                    collapsed ? 'justify-center' : ''
+                  } ${
                     active
                       ? 'bg-blue-600/15 text-white font-bold border border-blue-500/30'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
@@ -240,24 +279,33 @@ export const Sidebar = () => {
                   <Link
                     to={item.submodules && item.defaultTab ? `${item.path}?tab=${item.defaultTab}` : item.path}
                     onClick={() => {
-                      if (hasSubmodules) {
+                      if (hasSubmodules && !collapsed) {
                         setExpandedMenus(prev => ({ ...prev, [item.path]: true }));
                       }
                     }}
-                    className="flex-1 flex items-center gap-2.5 px-3 py-2.5"
+                    title={collapsed ? item.label : undefined}
+                    className={`flex items-center ${
+                      collapsed 
+                        ? 'p-3 justify-center w-full' 
+                        : 'flex-1 gap-2.5 px-3 py-2.5'
+                    }`}
                   >
                     <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
-                    <span className="truncate">{item.label}</span>
-
-                    {item.badge && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 ml-auto mr-1">
-                        {item.badge}
-                      </span>
+                    
+                    {!collapsed && (
+                      <>
+                        <span className="truncate">{item.label}</span>
+                        {item.badge && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 ml-auto mr-1">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
                     )}
                   </Link>
 
-                  {/* Flecha desplegable si tiene submódulos */}
-                  {hasSubmodules && (
+                  {/* Flecha desplegable en modo expandido */}
+                  {!collapsed && hasSubmodules && (
                     <button
                       onClick={(e) => toggleMenu(item.path, e)}
                       title={isExpanded ? "Ocultar submódulos" : "Mostrar submódulos"}
@@ -272,9 +320,9 @@ export const Sidebar = () => {
                   )}
                 </div>
 
-                {/* Submódulos Desplegables (Pestañas) */}
-                {hasSubmodules && isExpanded && (
-                  <div className="ml-4 pl-3.5 border-l border-slate-800/80 py-1 space-y-1 animate-fadeIn">
+                {/* Submódulos Desplegables en MODO EXPANDIDO */}
+                {!collapsed && hasSubmodules && isExpanded && (
+                  <div className="ml-4 pl-3.5 border-l border-slate-800/80 py-1 space-y-1">
                     {item.submodules.map((sub, sIdx) => {
                       const SubIcon = sub.icon;
                       const subActive = isSubmoduleActive(item, sub);
@@ -300,47 +348,104 @@ export const Sidebar = () => {
                   </div>
                 )}
 
+                {/* Submódulos Flotantes (POPOVER FLYOUT) en MODO PLEGADO */}
+                {collapsed && isHovered && (
+                  <div 
+                    className="absolute left-full top-0 ml-2 w-56 bg-[#09101d] border border-slate-700/80 rounded-2xl p-2.5 shadow-2xl z-50 text-xs animate-fadeIn"
+                    style={{ minWidth: '220px' }}
+                  >
+                    <div className="px-3 py-1.5 mb-1.5 border-b border-slate-800 text-[11px] font-black text-sky-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-normal">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    {hasSubmodules ? (
+                      <div className="space-y-1">
+                        {item.submodules.map((sub, sIdx) => {
+                          const SubIcon = sub.icon;
+                          const subActive = isSubmoduleActive(item, sub);
+                          const targetUrl = sub.tab !== undefined 
+                            ? `${item.path}?tab=${sub.tab}` 
+                            : `${item.path}${sub.query ? '?' + sub.query : ''}`;
+
+                          return (
+                            <Link
+                              key={sIdx}
+                              to={targetUrl}
+                              onClick={() => setHoveredMenu(null)}
+                              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition ${
+                                subActive
+                                  ? 'bg-sky-500/20 text-sky-300 font-bold border-l-2 border-sky-400'
+                                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                              }`}
+                            >
+                              <SubIcon className={`w-3.5 h-3.5 flex-shrink-0 ${subActive ? 'text-sky-400' : 'text-slate-500'}`} />
+                              <span className="truncate">{sub.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="px-3 py-1.5 text-slate-400 text-[11px]">
+                        Acceso directo al módulo
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
             );
           })}
         </nav>
       </div>
 
-      {/* 3. Sección Inferior Estática: Silueta y Crédito Institucional */}
+      {/* 3. Sección Inferior: Silueta y Crédito Institucional */}
       <div className="p-4 border-t border-slate-800/80">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            Servidor Local Activo
-          </span>
-        </div>
+        {!collapsed ? (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Servidor Local Activo
+              </span>
+            </div>
 
-        <div className="opacity-25 hover:opacity-50 transition duration-300 flex flex-col items-center">
-          <svg
-            className="w-28 h-14 text-sky-400"
-            viewBox="0 0 120 70"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M 15 35 L 60 15 L 105 35 Z" fill="currentColor" fillOpacity="0.1" />
-            <rect x="52" y="5" width="16" height="10" rx="1" />
-            <circle cx="60" cy="10" r="2.5" />
-            <line x1="60" y1="2" x2="60" y2="5" />
-            <rect x="25" y="35" width="6" height="28" rx="0.5" />
-            <rect x="42" y="35" width="6" height="28" rx="0.5" />
-            <rect x="57" y="35" width="6" height="28" rx="0.5" />
-            <rect x="72" y="35" width="6" height="28" rx="0.5" />
-            <rect x="89" y="35" width="6" height="28" rx="0.5" />
-            <rect x="10" y="63" width="100" height="4" rx="1" />
-          </svg>
-        </div>
-        
-        <div className="text-[9px] text-center text-slate-500 mt-2 font-mono">
-          v2.5.0 • Inventario Escolar
-        </div>
+            <div className="opacity-25 hover:opacity-50 transition duration-300 flex flex-col items-center">
+              <svg
+                className="w-28 h-14 text-sky-400"
+                viewBox="0 0 120 70"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M 15 35 L 60 15 L 105 35 Z" fill="currentColor" fillOpacity="0.1" />
+                <rect x="52" y="5" width="16" height="10" rx="1" />
+                <circle cx="60" cy="10" r="2.5" />
+                <line x1="60" y1="2" x2="60" y2="5" />
+                <rect x="25" y="35" width="6" height="28" rx="0.5" />
+                <rect x="42" y="35" width="6" height="28" rx="0.5" />
+                <rect x="57" y="35" width="6" height="28" rx="0.5" />
+                <rect x="72" y="35" width="6" height="28" rx="0.5" />
+                <rect x="89" y="35" width="6" height="28" rx="0.5" />
+                <rect x="10" y="63" width="100" height="4" rx="1" />
+              </svg>
+            </div>
+            
+            <div className="text-[9px] text-center text-slate-500 mt-2 font-mono">
+              v2.5.0 • Inventario Escolar
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-slate-500" title="Sistema v2.5.0">
+            <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+          </div>
+        )}
       </div>
 
     </aside>
