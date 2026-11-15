@@ -22,11 +22,12 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Interceptor para agregar token JWT en las cabeceras
+// Interceptor para agregar token JWT en las cabeceras (compatible con Apache FastCGI/cPanel)
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    config.headers['X-Authorization'] = `Bearer ${token}`;
   }
   return config;
 });

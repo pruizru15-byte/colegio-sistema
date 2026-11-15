@@ -18,8 +18,15 @@ import { loginApi, getMeApi } from '../services/api';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('usuario_actual');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,10 +34,15 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const userData = await getMeApi();
-          setUser(userData);
+          if (userData && (userData.id || userData.email)) {
+            setUser(userData);
+            localStorage.setItem('usuario_actual', JSON.stringify(userData));
+          }
         } catch (error) {
-          console.error("Token inválido o expirado:", error);
-          logout();
+          console.warn("Validando sesión de usuario:", error);
+          if (error?.response?.status === 401) {
+            logout();
+          }
         }
       }
       setLoading(false);
@@ -40,20 +52,28 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const data = await loginApi(email, password);
+    const u = data.usuario || data.user;
     localStorage.setItem('token', data.access_token);
+    if (u) {
+      localStorage.setItem('usuario_actual', JSON.stringify(u));
+    }
     setToken(data.access_token);
-    setUser(data.usuario || data.user);
+    setUser(u);
     return data;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('usuario_actual');
     setToken(null);
     setUser(null);
   };
 
   const updateUser = (newUserData) => {
     setUser(newUserData);
+    if (newUserData) {
+      localStorage.setItem('usuario_actual', JSON.stringify(newUserData));
+    }
   };
 
   const isAdmin = user?.rol?.toLowerCase() === 'administrador';
