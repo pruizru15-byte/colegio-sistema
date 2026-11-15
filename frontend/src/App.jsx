@@ -48,17 +48,6 @@ const AdminRoute = ({ children }) => {
 
 const AppLayout = ({ children }) => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = React.useState(() => {
-    return localStorage.getItem('sidebar_collapsed') === 'true';
-  });
-
-  const toggleSidebar = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem('sidebar_collapsed', String(next));
-      return next;
-    });
-  };
 
   const isAuthPage = location.pathname === '/login';
   const isPublicFicha = location.pathname.startsWith('/ficha/');
@@ -69,12 +58,12 @@ const AppLayout = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-800">
-      {/* Barra Lateral Navegación (Plegable / Desplegable) */}
-      <Sidebar collapsed={collapsed} toggleSidebar={toggleSidebar} />
+      {/* Barra Lateral Navegación Estática con Submódulos Desplegables */}
+      <Sidebar />
 
       {/* Área Principal (Cabecera Superior + Contenido) */}
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        <TopHeader toggleSidebar={toggleSidebar} isSidebarCollapsed={collapsed} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopHeader />
         <main className="flex-1 p-6 overflow-y-auto max-w-[1600px] w-full mx-auto">
           {children}
         </main>

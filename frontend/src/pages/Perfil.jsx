@@ -19,15 +19,24 @@ import {
   Wrench, Bell, Sun, Moon, LaptopMinimal, CheckCircle2, MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { updatePerfilApi, cambiarPasswordApi, getUbicacionesApi } from '../services/api';
 
 export const Perfil = () => {
   const { user, updateUser } = useAuth();
   const { theme, setTheme } = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState('datos');
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'datos');
   const [ubicaciones, setUbicaciones] = useState([]);
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && t !== activeTab) {
+      setActiveTab(t);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     getUbicacionesApi().then(setUbicaciones).catch(console.error);

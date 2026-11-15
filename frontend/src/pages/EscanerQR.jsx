@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import { 
   ScanLine, Camera, ArrowRight, AlertCircle, QrCode, 
@@ -27,10 +27,19 @@ const API_BASE = 'http://localhost:8000/api';
 
 export const EscanerQR = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { token } = useAuth();
 
   // Pestaña activa: 'escaner', 'catalogo' o 'simulador'
-  const [tabActiva, setTabActiva] = useState('escaner');
+  const [tabActiva, setTabActiva] = useState(() => searchParams.get('tab') || 'escaner');
+
+  // Sincronizar si cambia el parámetro en URL
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && t !== tabActiva) {
+      setTabActiva(t);
+    }
+  }, [searchParams]);
 
   // Estados del Escáner
   const [codigoManual, setCodigoManual] = useState('');

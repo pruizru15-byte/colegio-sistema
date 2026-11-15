@@ -19,12 +19,13 @@ import {
   Building2, Sparkles, Layers, ShieldCheck, X, RefreshCw, QrCode
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:8000/api';
 
 export const Ubicaciones = () => {
   const { token, isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Estados principales
   const [ubicaciones, setUbicaciones] = useState([]);
@@ -36,7 +37,15 @@ export const Ubicaciones = () => {
   const [successMsg, setSuccessMsg] = useState('');
 
   // Pestañas: 'ambientes' o 'prestamos'
-  const [tabActiva, setTabActiva] = useState('ambientes');
+  const [tabActiva, setTabActiva] = useState(() => searchParams.get('tab') || 'ambientes');
+
+  // Sincronizar con URL (?tab=...)
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && t !== tabActiva) {
+      setTabActiva(t);
+    }
+  }, [searchParams]);
 
   // Filtros
   const [busqueda, setBusqueda] = useState('');

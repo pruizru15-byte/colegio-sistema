@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Wrench, Plus, Search, Filter, Clock, CheckCircle2, 
   AlertTriangle, Calendar, User, DollarSign, X, Check, 
@@ -28,20 +28,32 @@ import { useAuth } from '../context/AuthContext';
 
 export const Mantenimientos = () => {
   const { isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [ordenes, setOrdenes] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filtros
-  const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState(() => searchParams.get('estado') || '');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroPrioridad, setFiltroPrioridad] = useState('');
   const [busqueda, setBusqueda] = useState('');
 
   // Modales
-  const [modalNuevaOrden, setModalNuevaOrden] = useState(false);
+  const [modalNuevaOrden, setModalNuevaOrden] = useState(() => searchParams.get('accion') === 'nueva');
   const [modalSeguimiento, setModalSeguimiento] = useState(null);
   const [modalConcluir, setModalConcluir] = useState(null);
+
+  // Sincronizar filtros desde la URL
+  useEffect(() => {
+    const est = searchParams.get('estado');
+    if (est !== null && est !== filtroEstado) {
+      setFiltroEstado(est);
+    }
+    if (searchParams.get('accion') === 'nueva') {
+      setModalNuevaOrden(true);
+    }
+  }, [searchParams]);
 
   // Formulario Crear
   const [formCrear, setFormCrear] = useState({

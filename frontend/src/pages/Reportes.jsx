@@ -20,11 +20,13 @@ import {
   Layers, Sparkles, FileText, Calendar, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:8000/api';
 
 export const Reportes = () => {
   const { token, user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Estados principales
   const [resumen, setResumen] = useState(null);
@@ -36,7 +38,15 @@ export const Reportes = () => {
   const [loading, setLoading] = useState(true);
 
   // Pestaña activa
-  const [tabReporte, setTabReporte] = useState('inventario');
+  const [tabReporte, setTabReporte] = useState(() => searchParams.get('tab') || 'inventario');
+
+  // Sincronizar pestaña desde URL
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && t !== tabReporte) {
+      setTabReporte(t);
+    }
+  }, [searchParams]);
 
   // Filtros Inventario
   const [filtroTipo, setFiltroTipo] = useState('todos');

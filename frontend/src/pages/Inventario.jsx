@@ -145,6 +145,14 @@ export const Inventario = () => {
     fetchDatos();
   }, []);
 
+  // Sincronizar pestaña si cambia el parámetro de búsqueda en URL (?tab=...)
+  useEffect(() => {
+    const tabUrl = searchParams.get('tab');
+    if (tabUrl && tabUrl !== tabActiva) {
+      setTabActiva(tabUrl);
+    }
+  }, [searchParams]);
+
   // Generador de código patrimonial automático escolar
   const handleAutoGenerarCodigo = () => {
     const prefijos = {
