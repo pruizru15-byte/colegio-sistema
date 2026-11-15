@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
     const data = await loginApi(email, password);
     localStorage.setItem('token', data.access_token);
     setToken(data.access_token);
-    setUser(data.usuario);
+    setUser(data.usuario || data.user);
     return data;
   };
 

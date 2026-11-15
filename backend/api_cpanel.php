@@ -149,15 +149,18 @@ if ($path === '/auth/login' && $method === 'POST') {
     ];
     $token = jwt_encode($tokenPayload, $jwtSecret);
 
+    $userData = [
+        'id' => (int)$user['id'],
+        'nombre' => $user['nombre'],
+        'email' => $user['email'],
+        'rol' => $user['rol']
+    ];
+
     echo json_encode([
         'access_token' => $token,
         'token_type' => 'bearer',
-        'user' => [
-            'id' => $user['id'],
-            'nombre' => $user['nombre'],
-            'email' => $user['email'],
-            'rol' => $user['rol']
-        ]
+        'usuario' => $userData,
+        'user' => $userData
     ]);
     exit;
 }

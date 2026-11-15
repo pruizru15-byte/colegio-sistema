@@ -11,6 +11,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Silenciar aviso informativo de Tailwind CDN en consola de producción -->
+    <script>
+      (function() {
+        const _warn = console.warn;
+        console.warn = function(...args) {
+          if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+          _warn.apply(console, args);
+        };
+      })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
