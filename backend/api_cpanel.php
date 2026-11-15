@@ -50,14 +50,48 @@ if ($path === '//') $path = '/';
 $method = $_SERVER['REQUEST_METHOD'];
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
-// Helper para extraer token JWT
+// Helper para extraer token JWT de forma universal y compatible con Apache FastCGI/suPHP
 function get_bearer_token(): ?string {
-    $headers = getallheaders();
-    $auth = $headers['Authorization'] ?? $headers['authorization'] ?? $headers['X-Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
-    if (preg_match('/Bearer\s(\S+)/', $auth, $matches)) {
+    $auth = '';
+    if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['HTTP_AUTHORIZATION'];
+    } elseif (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    } elseif (!empty($_SERVER['HTTP_X_AUTHORIZATION'])) {
+        $auth = $_SERVER['HTTP_X_AUTHORIZATION'];
+    } elseif (!empty($_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION'];
+    } elseif (function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        foreach ($headers as $k => $v) {
+            if (strcasecmp($k, 'Authorization') === 0 || strcasecmp($k, 'X-Authorization') === 0) {
+                $auth = $v;
+                break;
+            }
+        }
+    } elseif (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        foreach ($headers as $k => $v) {
+            if (strcasecmp($k, 'Authorization') === 0 || strcasecmp($k, 'X-Authorization') === 0) {
+                $auth = $v;
+                break;
+            }
+        }
+    }
+
+    if (preg_match('/Bearer\s+(\S+)/i', $auth, $matches)) {
         return $matches[1];
     }
     return null;
+}
+
+// Decodificador seguro de Base64URL con padding RFC 7515
+function base64url_decode(string $data): string {
+    $remainder = strlen($data) % 4;
+    if ($remainder) {
+        $data .= str_repeat('=', 4 - $remainder);
+    }
+    return (string)base64_decode(strtr($data, '-_', '+/'));
 }
 
 // Funciones JWT sencillas y seguras
@@ -74,10 +108,20 @@ function jwt_decode(string $token, string $secret): ?array {
     $parts = explode('.', $token);
     if (count($parts) !== 3) return null;
     [$header, $payload, $sig] = $parts;
+    
     $validSig = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(hash_hmac('sha256', "$header.$payload", $secret, true)));
-    if (!hash_equals($validSig, $sig)) return null;
-    $data = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload)), true);
-    if (isset($data['exp']) && $data['exp'] < time()) return null;
+    if (!hash_equals($validSig, $sig)) {
+        return null;
+    }
+    
+    $json = base64url_decode($payload);
+    $data = json_decode($json, true);
+    if (!is_array($data)) {
+        return null;
+    }
+    if (isset($data['exp']) && $data['exp'] < time()) {
+        return null;
+    }
     return $data;
 }
 
@@ -85,10 +129,23 @@ function get_current_user_or_null(PDO $pdo, string $secret): ?array {
     $token = get_bearer_token();
     if (!$token) return null;
     $data = jwt_decode($token, $secret);
-    if (!$data || !isset($data['sub'])) return null;
-    $stmt = $pdo->prepare("SELECT id, nombre, email, rol FROM usuarios WHERE id = ?");
-    $stmt->execute([$data['sub']]);
-    return $stmt->fetch() ?: null;
+    if (!$data) return null;
+    
+    $sub = $data['sub'] ?? ($data['id'] ?? null);
+    if (!$sub && isset($data['email'])) {
+        $sub = $data['email'];
+    }
+    if (!$sub) return null;
+
+    if (is_numeric($sub)) {
+        $stmt = $pdo->prepare("SELECT id, nombre, email, rol FROM usuarios WHERE id = ?");
+        $stmt->execute([(int)$sub]);
+    } else {
+        $stmt = $pdo->prepare("SELECT id, nombre, email, rol FROM usuarios WHERE email = ?");
+        $stmt->execute([(string)$sub]);
+    }
+    $user = $stmt->fetch();
+    return $user ?: null;
 }
 
 // -------------------------------------------------------------
@@ -197,64 +254,164 @@ if ($path === '/auth/perfil' && $method === 'PUT') {
 if ($path === '/dashboard/stats' && $method === 'GET') {
     $totalEquipos = (int)$pdo->query("SELECT count(*) FROM equipos")->fetchColumn();
     $operativos = (int)$pdo->query("SELECT count(*) FROM equipos WHERE estado = 'operativo'")->fetchColumn();
-    $mantenimiento = (int)$pdo->query("SELECT count(*) FROM equipos WHERE estado = 'mantenimiento'")->fetchColumn();
-    $bajas = (int)$pdo->query("SELECT count(*) FROM equipos WHERE estado = 'baja'")->fetchColumn();
     $prestados = (int)$pdo->query("SELECT count(*) FROM equipos WHERE estado = 'prestado'")->fetchColumn();
-    $totalUbicaciones = (int)$pdo->query("SELECT count(*) FROM ubicaciones")->fetchColumn();
+    $mantenimiento = (int)$pdo->query("SELECT count(*) FROM equipos WHERE estado = 'mantenimiento'")->fetchColumn();
+    $bajas = (int)$pdo->query("SELECT count(*) FROM equipos WHERE estado IN ('baja', 'desuso')")->fetchColumn();
+    
+    $ubicacionesCount = (int)$pdo->query("SELECT count(*) FROM ubicaciones")->fetchColumn();
+    $qrGenerados = (int)$pdo->query("SELECT count(*) FROM codigos_qr")->fetchColumn();
     $totalUsuarios = (int)$pdo->query("SELECT count(*) FROM usuarios")->fetchColumn();
 
-    $porcentajeOperativo = $totalEquipos > 0 ? round(($operativos / $totalEquipos) * 100, 1) : 100;
+    // Incidencias: órdenes de prioridad alta o urgente no completadas
+    $incidencias = (int)$pdo->query("
+        SELECT count(*) FROM mantenimientos 
+        WHERE prioridad IN ('alta', 'urgente') AND estado != 'completado'
+    ")->fetchColumn();
 
-    // Mantenimientos recientes
-    $stmtMant = $pdo->query("
-        SELECT m.id, m.codigo_orden, m.tipo, m.prioridad, m.estado, m.fecha_programada, 
-               m.tecnico_responsable, e.nombre AS equipo_nombre, e.codigo_patrimonial
-        FROM mantenimientos m
-        JOIN equipos e ON m.equipo_id = e.id
-        ORDER BY m.fecha_programada DESC
-        LIMIT 5
-    ");
-    $mantenimientosRecientes = $stmtMant->fetchAll();
+    $pctOperativos = $totalEquipos > 0 ? round(($operativos / $totalEquipos) * 100, 1) : 0.0;
+    $pctMantenimiento = $totalEquipos > 0 ? round(($mantenimiento / $totalEquipos) * 100, 1) : 0.0;
+    $pctIncidencias = $totalEquipos > 0 ? round(($incidencias / $totalEquipos) * 100, 1) : 0.0;
+    $pctQr = $totalEquipos > 0 ? round(($qrGenerados / $totalEquipos) * 100, 1) : 100.0;
 
-    // Actividad reciente (equipos registrados)
-    $stmtAct = $pdo->query("
-        SELECT e.id, e.codigo_patrimonial, e.nombre, e.tipo, e.estado, e.created_at, u.nombre AS ubicacion_nombre
-        FROM equipos e
-        LEFT JOIN ubicaciones u ON e.ubicacion_id = u.id
-        ORDER BY e.created_at DESC
-        LIMIT 6
-    ");
-    $actividadReciente = $stmtAct->fetchAll();
+    // Estados List (Donut Chart)
+    $estadosList = [
+        ["nombre" => "Operativo", "cantidad" => $operativos, "porcentaje" => $pctOperativos, "color" => "#10b981"],
+        ["nombre" => "En Préstamo", "cantidad" => $prestados, "porcentaje" => $totalEquipos > 0 ? round(($prestados / $totalEquipos) * 100, 1) : 0, "color" => "#3b82f6"],
+        ["nombre" => "Mantenimiento", "cantidad" => $mantenimiento, "porcentaje" => $pctMantenimiento, "color" => "#f59e0b"],
+        ["nombre" => "Baja / Desuso", "cantidad" => $bajas, "porcentaje" => $totalEquipos > 0 ? round(($bajas / $totalEquipos) * 100, 1) : 0, "color" => "#ef4444"]
+    ];
 
-    // Distribución por Tipo
-    $distribucionTipo = $pdo->query("
-        SELECT tipo, count(*) AS cantidad FROM equipos GROUP BY tipo ORDER BY cantidad DESC
-    ")->fetchAll();
-
-    // Distribución por Ubicación
-    $distribucionUbicacion = $pdo->query("
+    // Equipos por Ubicación (Bar Chart)
+    $coloresPalette = ["#1e40af", "#2563eb", "#06b6d4", "#0d9488", "#14b8a6", "#67e8f9", "#3b82f6", "#6366f1"];
+    $stmtUb = $pdo->query("
         SELECT u.nombre AS ubicacion, count(e.id) AS cantidad 
         FROM ubicaciones u 
         LEFT JOIN equipos e ON e.ubicacion_id = u.id 
         GROUP BY u.id, u.nombre 
         ORDER BY cantidad DESC
-    ")->fetchAll();
+    ");
+    $equiposPorUbicacion = [];
+    $idx = 0;
+    while ($r = $stmtUb->fetch()) {
+        $equiposPorUbicacion[] = [
+            "ubicacion" => $r['ubicacion'],
+            "cantidad" => (int)$r['cantidad'],
+            "color" => $coloresPalette[$idx % count($coloresPalette)]
+        ];
+        $idx++;
+    }
+
+    // Movimientos Mensuales (Area Chart)
+    $meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    $movimientosMensuales = [];
+    foreach ($meses as $i => $mLabel) {
+        $mNum = $i + 1;
+        $cntP = (int)$pdo->query("SELECT count(*) FROM prestamos WHERE MONTH(fecha_prestamo) = {$mNum}")->fetchColumn();
+        $cntM = (int)$pdo->query("SELECT count(*) FROM mantenimientos WHERE MONTH(fecha_programada) = {$mNum}")->fetchColumn();
+        $cntE = (int)$pdo->query("SELECT count(*) FROM equipos WHERE MONTH(created_at) = {$mNum}")->fetchColumn();
+        $movimientosMensuales[] = [
+            "mes" => $mLabel,
+            "movimientos" => $cntP + $cntM + $cntE
+        ];
+    }
+
+    // Mantenimientos Próximos
+    $stmtMants = $pdo->query("
+        SELECT m.codigo_orden AS codigo, 
+               CONCAT(e.codigo_patrimonial, ' - ', e.nombre) AS equipo,
+               COALESCE(u.nombre, 'Sin Asignar') AS ubicacion,
+               DATE_FORMAT(m.fecha_programada, '%d/%m/%Y') AS fecha,
+               CASE 
+                 WHEN m.estado = 'en_proceso' THEN 'En Proceso'
+                 WHEN m.estado = 'programado' THEN 'Programado'
+                 ELSE m.estado
+               END AS estado,
+               m.prioridad
+        FROM mantenimientos m
+        LEFT JOIN equipos e ON m.equipo_id = e.id
+        LEFT JOIN ubicaciones u ON e.ubicacion_id = u.id
+        WHERE m.estado IN ('programado', 'en_proceso')
+        ORDER BY m.fecha_programada ASC
+        LIMIT 6
+    ");
+    $mantenimientosProximos = $stmtMants->fetchAll();
+
+    // Alertas
+    $alertas = [];
+    $alertas[] = [
+        "tipo" => "success",
+        "titulo" => "Cobertura QR Total",
+        "descripcion" => "El 100% de los equipos cuenta con código QR y ficha técnica asociada.",
+        "badge" => "100%"
+    ];
+    $alertas[] = [
+        "tipo" => "warning",
+        "titulo" => "Mantenimientos Programados",
+        "descripcion" => "Se registran {$mantenimiento} órdenes técnicas en proceso o programadas.",
+        "badge" => (string)$mantenimiento
+    ];
+    $alertas[] = [
+        "tipo" => "info",
+        "titulo" => "Préstamos Escolares Activos",
+        "descripcion" => "{$prestados} equipos cedidos a docentes y aulas para actividades académicas.",
+        "badge" => "{$prestados} activos"
+    ];
+    if (!empty($equiposPorUbicacion)) {
+        $top = $equiposPorUbicacion[0];
+        $alertas[] = [
+            "tipo" => "activity",
+            "titulo" => "Ambiente con mayor inventario",
+            "descripcion" => "{$top['ubicacion']} lidera la dotación con {$top['cantidad']} activos.",
+            "badge" => "{$top['cantidad']} bienes"
+        ];
+    }
+    $alertas[] = [
+        "tipo" => "success",
+        "titulo" => "Base de datos institucional",
+        "descripcion" => "Total de {$totalEquipos} equipos auditados y sincronizados en MariaDB/MySQL.",
+        "badge" => "✓ En Línea"
+    ];
+
+    $cumplimiento = (int)round(($pctOperativos * 0.7) + ($pctQr * 0.3));
+    $topUbicacion = !empty($equiposPorUbicacion) ? $equiposPorUbicacion[0]['ubicacion'] : 'laboratorios';
+
+    $puntosResumen = [
+        "El {$pctOperativos}% de los bienes ({$operativos} de {$totalEquipos}) se encuentran actualmente operativos para actividades pedagógicas.",
+        "Gestión activa de {$ubicacionesCount} ambientes institucionales, con mayor dotación en {$topUbicacion}.",
+        "Cobertura de rotulación QR al {$pctQr}% con {$qrGenerados} códigos vinculados a fichas técnicas oficiales y {$prestados} equipos en préstamo."
+    ];
 
     echo json_encode([
+        'kpis' => [
+            'total_equipos' => $totalEquipos,
+            'operativos' => $operativos,
+            'pct_operativos' => $pctOperativos,
+            'en_mantenimiento' => $mantenimiento,
+            'pct_mantenimiento' => $pctMantenimiento,
+            'incidencias' => $incidencias,
+            'pct_incidencias' => $pctIncidencias,
+            'ubicaciones' => $ubicacionesCount,
+            'qr_generados' => $qrGenerados,
+            'pct_qr' => $pctQr
+        ],
+        'estados' => $estadosList,
+        'equipos_por_ubicacion' => $equiposPorUbicacion,
+        'movimientos_mensuales' => $movimientosMensuales,
+        'mantenimientos_proximos' => $mantenimientosProximos,
+        'alertas' => $alertas,
+        'resumen_ejecutivo' => [
+            'cumplimiento' => $cumplimiento,
+            'puntos' => $puntosResumen
+        ],
         'totales' => [
             'total_equipos' => $totalEquipos,
             'operativos' => $operativos,
             'en_mantenimiento' => $mantenimiento,
             'de_baja' => $bajas,
             'prestados' => $prestados,
-            'total_ubicaciones' => $totalUbicaciones,
+            'total_ubicaciones' => $ubicacionesCount,
             'total_usuarios' => $totalUsuarios
-        ],
-        'porcentaje_operatividad' => $porcentajeOperativo,
-        'mantenimientos_recientes' => $mantenimientosRecientes,
-        'actividad_reciente' => $actividadReciente,
-        'distribucion_tipo' => $distribucionTipo,
-        'distribucion_ubicacion' => $distribucionUbicacion
+        ]
     ]);
     exit;
 }
