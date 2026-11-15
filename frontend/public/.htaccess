@@ -1,33 +1,35 @@
-# Apache Configuration for Sistema Colegio SPA under /sistema-colegio/
+# Habilitar paso de autenticacion en Apache FastCGI/suPHP
+CGIPassAuth On
+
+<IfModule mod_setenvif.c>
+  SetEnvIfNoCase Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  SetEnvIfNoCase X-Authorization "(.*)" HTTP_X_AUTHORIZATION=$1
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /sistema-colegio/
-
-  # Servir archivos o directorios estáticos existentes directamente
+  
+  # Preservar cabeceras Authorization para peticiones API
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+  RewriteCond %{HTTP:X-Authorization} .
+  RewriteRule .* - [E=HTTP_X_AUTHORIZATION:%{HTTP:X-Authorization}]
+  
+  # Si la petición es para la API backend (/sistema-colegio/api/...), no interceptar
+  RewriteRule ^api(/.*)?$ - [L,NC]
+  
+  # Si el archivo o carpeta existe físicamente, servir directamente
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # Excluir llamadas al backend /api/
-  RewriteRule ^api/ - [L]
-
-  # Fallback a index.html para React Router
-  RewriteRule ^ index.html [L]
+  # Reescritura para Single Page Application (React Router) bajo /sistema-colegio
+  RewriteRule ^index\.html$ - [L]
+  RewriteRule . /sistema-colegio/index.html [L]
 </IfModule>
 
-# Cache de archivos estáticos
-<IfModule mod_expires.c>
-  ExpiresActive On
-  ExpiresByType image/jpg "access plus 1 month"
-  ExpiresByType image/jpeg "access plus 1 month"
-  ExpiresByType image/gif "access plus 1 month"
-  ExpiresByType image/png "access plus 1 month"
-  ExpiresByType text/css "access plus 1 month"
-  ExpiresByType application/javascript "access plus 1 month"
-</IfModule>
-
-# Cabeceras de seguridad
-<IfModule mod_headers.c>
-  Header set X-Content-Type-Options "nosniff"
-  Header set X-Frame-Options "SAMEORIGIN"
+# Compresión GZIP para mejor rendimiento
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
 </IfModule>
