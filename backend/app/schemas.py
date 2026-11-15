@@ -236,3 +236,33 @@ class UbicacionDetailResponse(UbicacionResponse):
     usuarios_asignados_detalle: List[UsuarioResponse] = []
 
 
+# --- Modelos de Notificaciones ---
+class NotificacionBase(BaseModel):
+    titulo: str
+    descripcion: str
+    tipo: Optional[str] = "info"  # danger, warning, success, info
+    categoria: Optional[str] = "sistema"  # mantenimiento, prestamo, equipo, sistema
+    enlace_url: Optional[str] = None
+
+class NotificacionCreate(NotificacionBase):
+    usuario_id: Optional[int] = None
+
+class NotificacionResponse(NotificacionBase):
+    id: int
+    leido: bool = False
+    usuario_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class NotificacionesListResponse(BaseModel):
+    total: int
+    no_leidas: int
+    urgentes: int
+    advertencias: int
+    informativas: int
+    notificaciones: List[NotificacionResponse]
+
+
+

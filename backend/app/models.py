@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Date, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Date, Boolean, func
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -125,5 +125,20 @@ class PrestamoModel(Base):
     equipo = relationship("EquipoModel", back_populates="prestamos")
     usuario = relationship("UsuarioModel", back_populates="prestamos")
     ubicacion = relationship("UbicacionModel", back_populates="prestamos")
+
+
+class NotificacionModel(Base):
+    __tablename__ = "notificaciones"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    titulo = Column(String(180), nullable=False)
+    descripcion = Column(Text, nullable=False)
+    tipo = Column(String(50), nullable=False, default="info")  # danger, warning, success, info
+    categoria = Column(String(50), nullable=False, default="sistema")  # mantenimiento, prestamo, equipo, sistema
+    enlace_url = Column(String(255), nullable=True)
+    leido = Column(Boolean, default=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
 
 

@@ -23,8 +23,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { NotificationModal } from './NotificationModal';
 import { SearchModal } from './SearchModal';
+import { getNotificacionesApi } from '../services/api';
 
-export const TopHeader = ({ notifications = [], toggleSidebar, isSidebarCollapsed = false }) => {
+export const TopHeader = ({ toggleSidebar, isSidebarCollapsed = false }) => {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -33,6 +34,15 @@ export const TopHeader = ({ notifications = [], toggleSidebar, isSidebarCollapse
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  React.useEffect(() => {
+    getNotificacionesApi().then(res => {
+      if (res && res.no_leidas !== undefined) {
+        setUnreadCount(res.no_leidas);
+      }
+    }).catch(console.warn);
+  }, []);
 
   const themeOptions = [
     { id: 'claro', label: 'Claro', icon: Sun },
@@ -97,12 +107,16 @@ export const TopHeader = ({ notifications = [], toggleSidebar, isSidebarCollapse
               title="Notificaciones y alertas"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
             <NotificationModal
               isOpen={notifOpen}
               onClose={() => setNotifOpen(false)}
-              notifications={notifications}
+              onCountChange={setUnreadCount}
             />
           </div>
 

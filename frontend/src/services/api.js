@@ -202,5 +202,31 @@ export const getQRStatsApi = async () => {
   return res.data;
 };
 
+// Centro de Notificaciones y Alertas Escolares
+export const getNotificacionesApi = async (params = {}) => {
+  const res = await api.get('/notificaciones', { params });
+  return res.data;
+};
+
+export const marcarNotificacionLeidaApi = async (id) => {
+  const res = await api.put(`/notificaciones/${id}/leer`);
+  return res.data;
+};
+
+export const marcarTodasNotificacionesLeidasApi = async () => {
+  const res = await api.post('/notificaciones/marcar-todas-leidas');
+  return res.data;
+};
+
+export const createNotificacionApi = async (data) => {
+  const res = await api.post('/notificaciones', data);
+  return res.data;
+};
+
+export const deleteNotificacionApi = async (id) => {
+  const res = await api.delete(`/notificaciones/${id}`);
+  return res.data;
+};
+
 export default api;
 

@@ -19,7 +19,7 @@ import {
   ScanLine, Camera, ArrowRight, AlertCircle, QrCode, 
   Printer, Download, Upload, Search, CheckCircle2, 
   Sparkles, RefreshCw, Smartphone, Eye, ExternalLink,
-  Laptop, MapPin, Building2, Layers
+  Laptop, MapPin, Building2, Layers, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -49,6 +49,7 @@ export const EscanerQR = () => {
   const [errorCamara, setErrorCamara] = useState('');
   const [camaras, setCamaras] = useState([]);
   const [camaraSeleccionada, setCamaraSeleccionada] = useState('');
+  const [mostrarAyudaCamara, setMostrarAyudaCamara] = useState(false);
   const [historialEscaneos, setHistorialEscaneos] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('historial_qr_escaneos') || '[]');
@@ -103,7 +104,7 @@ export const EscanerQR = () => {
     cargarDatosQR();
   }, []);
 
-  // Iniciar la cámara de forma directa y nativa
+  // Iniciar la cámara de forma robusta con detección de hardware real y filtro anti-pantalla negra
   const activarCamara = async (dispositivoId = null) => {
     try {
       setCamaraCargando(true);
@@ -121,13 +122,32 @@ export const EscanerQR = () => {
         }
       }
 
-      // Asegurar que el estado indique cámara activa para que el contenedor esté en el DOM con tamaño real
+      // Asegurar que el estado indique cámara activa para que el contenedor esté en el DOM
       setCamaraIniciada(true);
 
-      // Pequeña pausa asíncrona para que React pinte el contenedor #qr-reader con dimensiones completas
-      await new Promise(resolve => setTimeout(resolve, 80));
+      // Esperar brevemente a que React pinte el contenedor #qr-reader
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Listar cámaras físicas disponibles
+      // 1. Sondeo previo con getUserMedia nativo para que el navegador desbloquee las etiquetas reales de hardware
+      let streamSondeo = null;
+      try {
+        streamSondeo = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        });
+      } catch (errFacing) {
+        try {
+          streamSondeo = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (errGen) {
+          console.warn('Sondeo previo de cámara:', errGen);
+        }
+      }
+
+      // Detener inmediatamente pistas del sondeo para no bloquear el hardware
+      if (streamSondeo) {
+        streamSondeo.getTracks().forEach(t => t.stop());
+      }
+
+      // 2. Listar todas las cámaras físicas disponibles con etiquetas ya legibles
       let devices = [];
       try {
         devices = await Html5Qrcode.getCameras();
@@ -135,34 +155,47 @@ export const EscanerQR = () => {
           setCamaras(devices);
         }
       } catch (devErr) {
-        console.warn('Búsqueda inicial de dispositivos:', devErr);
+        console.warn('Búsqueda de dispositivos:', devErr);
       }
 
-      // Determinar la cámara idónea
+      // 3. Determinar la cámara idónea evitando cámaras virtuales (OBS/DroidCam) que transmiten cuadros negros
       let targetCamera = dispositivoId;
       if (!targetCamera && devices && devices.length > 0) {
+        // Filtrar cámaras que NO sean virtuales
+        const camarasFisicas = devices.filter(d => 
+          d.label && !/virtual|obs|droidcam|vysor|manycam|iriun|splitcam/i.test(d.label)
+        );
+
         // En móviles o tablets, preferir cámara trasera
-        const backCam = devices.find(d => d.label && /back|rear|trasera|ambiente/i.test(d.label));
-        // En PC/laptop, evitar cámaras virtuales inactivas (OBS, DroidCam) si existe cámara física integrada
-        const realCam = devices.find(d => d.label && !/virtual|obs/i.test(d.label));
-        targetCamera = backCam?.id || realCam?.id || devices[0].id;
+        const backCam = camarasFisicas.find(d => 
+          d.label && /back|rear|trasera|ambiente|environment/i.test(d.label)
+        );
+
+        // Seleccionar: trasera física > física integrada/USB > primera detectada
+        const camaraOptima = backCam || camarasFisicas[0] || devices[0];
+        if (camaraOptima) {
+          targetCamera = camaraOptima.id;
+          setCamaraSeleccionada(camaraOptima.id);
+        }
+      } else if (dispositivoId) {
+        setCamaraSeleccionada(dispositivoId);
       }
 
-      // Si aún no hay cámara específica, solicitar por facingMode
+      // Si aún no hay cámara por id, solicitar por facingMode
       if (!targetCamera) {
         targetCamera = { facingMode: 'environment' };
       }
 
-      // Inicializar Html5Qrcode en el contenedor #qr-reader
+      // 4. Inicializar Html5Qrcode en el contenedor #qr-reader
       const html5QrCode = new Html5Qrcode('qr-reader');
       html5QrCodeRef.current = html5QrCode;
 
       const qrConfig = {
-        fps: 15,
+        fps: 20,
         qrbox: (viewfinderWidth, viewfinderHeight) => {
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const edge = Math.floor(minEdge * 0.72);
-          return { width: Math.max(edge, 200), height: Math.max(edge, 200) };
+          const edge = Math.floor(minEdge * 0.75);
+          return { width: Math.max(edge, 220), height: Math.max(edge, 220) };
         },
       };
 
@@ -184,7 +217,7 @@ export const EscanerQR = () => {
         }
       };
 
-      // Intentar iniciar con la cámara seleccionada
+      // 5. Iniciar con la cámara seleccionada y fallback
       try {
         await html5QrCode.start(targetCamera, qrConfig, onScanSuccess, () => {});
       } catch (errFirst) {
@@ -193,14 +226,14 @@ export const EscanerQR = () => {
         await html5QrCode.start({ facingMode: 'user' }, qrConfig, onScanSuccess, () => {});
       }
 
-      // Con el permiso ya concedido, consultar lista actualizada de cámaras
+      // Con el permiso ya concedido, refrescar lista actualizada de cámaras
       try {
         const availableDevices = await Html5Qrcode.getCameras();
         if (availableDevices && availableDevices.length > 0) {
           setCamaras(availableDevices);
           if (typeof targetCamera === 'string') {
             setCamaraSeleccionada(targetCamera);
-          } else {
+          } else if (!dispositivoId) {
             setCamaraSeleccionada(availableDevices[0].id);
           }
         }
@@ -314,19 +347,21 @@ export const EscanerQR = () => {
           margin: 0 auto !important;
           border: none !important;
           background: #020617 !important;
-          border-radius: 1rem !important;
+          border-radius: 1.5rem !important;
           overflow: hidden !important;
           position: relative !important;
+          min-height: 320px !important;
         }
         #qr-reader video {
           width: 100% !important;
-          height: auto !important;
-          min-height: 280px !important;
-          max-height: 460px !important;
+          height: 100% !important;
+          min-height: 320px !important;
+          max-height: 480px !important;
           object-fit: cover !important;
-          border-radius: 1rem !important;
+          border-radius: 1.5rem !important;
           display: block !important;
           margin: 0 auto !important;
+          transform: none !important;
         }
         #qr-reader__scan_region {
           position: relative !important;
@@ -493,23 +528,56 @@ export const EscanerQR = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center flex-wrap gap-2">
+                  {/* Selector de cámara física con etiquetas reales */}
+                  {camaras.length > 0 && (
+                    <div className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 transition rounded-xl px-2.5 py-1.5 border border-slate-200">
+                      <Camera className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <select
+                        value={camaraSeleccionada}
+                        onChange={(e) => {
+                          const newCam = e.target.value;
+                          setCamaraSeleccionada(newCam);
+                          activarCamara(newCam);
+                        }}
+                        className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer max-w-[160px] sm:max-w-[220px] truncate"
+                        title="Seleccionar dispositivo de cámara"
+                      >
+                        {camaras.map((c, idx) => {
+                          const isVirtual = /virtual|obs|droidcam|vysor/i.test(c.label || '');
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {c.label ? `${c.label}${isVirtual ? ' (Virtual)' : ''}` : `Cámara ${idx + 1}`}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Botón rápido para alternar cámaras */}
                   {camaras.length > 1 && camaraIniciada && (
-                    <select
-                      value={camaraSeleccionada}
-                      onChange={(e) => activarCamara(e.target.value)}
-                      className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+                    <button
+                      onClick={() => {
+                        const curIdx = camaras.findIndex(c => c.id === camaraSeleccionada);
+                        const nextCam = camaras[(curIdx + 1) % camaras.length];
+                        if (nextCam) {
+                          setCamaraSeleccionada(nextCam.id);
+                          activarCamara(nextCam.id);
+                        }
+                      }}
+                      title="Alternar entre cámaras detectadas"
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 cursor-pointer"
                     >
-                      {camaras.map(c => (
-                        <option key={c.id} value={c.id}>{c.label || 'Cámara ' + c.id.slice(0, 4)}</option>
-                      ))}
-                    </select>
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Alternar</span>
+                    </button>
                   )}
 
                   {camaraIniciada ? (
                     <button
                       onClick={apagarCamara}
-                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center gap-1.5 cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" />
                       Apagar Cámara
@@ -518,7 +586,7 @@ export const EscanerQR = () => {
                     <button
                       onClick={() => activarCamara()}
                       disabled={camaraCargando}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <Camera className="w-4 h-4" />
                       {camaraCargando ? 'Iniciando...' : 'Habilitar Cámara'}
@@ -598,6 +666,66 @@ export const EscanerQR = () => {
                   </div>
                 )}
 
+              </div>
+
+              {/* Guía de Solución Rápida y Diagnóstico (si la cámara se ve negra) */}
+              <div className="mt-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs">
+                <div 
+                  className="flex items-center justify-between cursor-pointer select-none" 
+                  onClick={() => setMostrarAyudaCamara(prev => !prev)}
+                >
+                  <div className="flex items-center gap-2 font-bold text-slate-800">
+                    <HelpCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span>¿La cámara se ve en negro o no detecta el código QR?</span>
+                  </div>
+                  <span className="text-[11px] text-blue-600 font-bold hover:underline cursor-pointer">
+                    {mostrarAyudaCamara ? 'Ocultar sugerencias' : 'Ver soluciones rápidas (4)'}
+                  </span>
+                </div>
+
+                {mostrarAyudaCamara && (
+                  <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2.5 text-slate-600 leading-relaxed">
+                    <div className="flex items-start gap-2.5">
+                      <span className="font-bold text-blue-700 bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-[10px]">1</span>
+                      <div>
+                        <strong className="text-slate-800">Tapa u obturador físico de privacidad:</strong>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Laptops Lenovo (ThinkShutter), HP, Dell o Asus tienen un interruptor deslizante sobre el lente. Si está cerrado, la cámara transmite un cuadro 100% negro. Deslízalo para abrir la lente.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2.5">
+                      <span className="font-bold text-blue-700 bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-[10px]">2</span>
+                      <div>
+                        <strong className="text-slate-800">Cámara Virtual u OBS seleccionada:</strong>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Si tienes instalado OBS Studio, DroidCam o Iriun, el navegador puede haber asignado esa cámara inactiva. Elige tu cámara real (ej. <em>"Integrated Camera"</em> o <em>"Cámara Web USB"</em>) en el desplegable superior.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2.5">
+                      <span className="font-bold text-blue-700 bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-[10px]">3</span>
+                      <div>
+                        <strong className="text-slate-800">Cerrar otras aplicaciones que usen la cámara:</strong>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Windows bloquea el acceso si programas como Zoom, Microsoft Teams, Google Meet o la app Cámara de Windows ya están usando la webcam. Ciérralas y haz clic en <em>"Habilitar Cámara"</em>.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2.5">
+                      <span className="font-bold text-blue-700 bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-[10px]">4</span>
+                      <div>
+                        <strong className="text-slate-800">Escanear mediante foto o código patrimonial:</strong>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Si tu cámara no está disponible, utiliza la sección de abajo para seleccionar una foto con el código QR o escribe el código patrimonial para acceder a la ficha técnica al instante.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

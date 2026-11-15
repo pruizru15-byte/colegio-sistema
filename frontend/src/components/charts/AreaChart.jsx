@@ -17,8 +17,11 @@ import React, { useState } from 'react';
 export const AreaChart = ({ data = [] }) => {
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  const maxY = 40;
-  const yLabels = [40, 35, 30, 25, 20, 15, 10, 5, 0];
+  const movs = data.map(d => d.movimientos || 0);
+  const maxMov = movs.length > 0 ? Math.max(...movs) : 10;
+  const step = Math.max(Math.ceil(maxMov / 4), 1);
+  const maxY = Math.max(step * 4, 4);
+  const yLabels = [maxY, step * 3, step * 2, step * 1, 0];
   const width = 460;
   const height = 180;
   const paddingLeft = 32;

@@ -30,6 +30,7 @@ import { Ubicaciones } from './pages/Ubicaciones';
 import { Reportes } from './pages/Reportes';
 import { FichaPublicaQR } from './pages/FichaPublicaQR';
 import { EscanerQR } from './pages/EscanerQR';
+import { Notificaciones } from './pages/Notificaciones';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -171,6 +172,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <EscanerQR />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notificaciones"
+                element={
+                  <ProtectedRoute>
+                    <Notificaciones />
                   </ProtectedRoute>
                 }
               />

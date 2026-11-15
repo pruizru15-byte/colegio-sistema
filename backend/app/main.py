@@ -23,6 +23,7 @@ from app.controllers.usuario_controller import router as usuario_router
 from app.controllers.mantenimiento_controller import router as mantenimiento_router
 from app.controllers.ubicacion_controller import router as ubicacion_router
 from app.controllers.reporte_controller import router as reporte_router
+from app.controllers.notificacion_controller import router as notificacion_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -48,6 +49,7 @@ app.include_router(usuario_router, prefix="/api")
 app.include_router(mantenimiento_router, prefix="/api")
 app.include_router(ubicacion_router, prefix="/api")
 app.include_router(reporte_router, prefix="/api")
+app.include_router(notificacion_router, prefix="/api")
 
 @app.get("/health", tags=["Salud del Sistema"])
 def health_check():

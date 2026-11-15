@@ -19,7 +19,8 @@ import {
   Wrench, BarChart3, Settings, GraduationCap, ChevronDown, 
   ChevronRight, ChevronLeft, Laptop, Layers, Box, Plus, Share2, 
   Camera, Printer, Smartphone, Building2, Clock, FileText, 
-  AlertTriangle, CheckCircle2, User as UserIcon, Lock, ShieldCheck, Sun
+  AlertTriangle, CheckCircle2, User as UserIcon, Lock, ShieldCheck, Sun,
+  Bell, Megaphone
 } from 'lucide-react';
 
 export const Sidebar = ({ collapsed = false, toggleSidebar }) => {
@@ -103,6 +104,20 @@ export const Sidebar = ({ collapsed = false, toggleSidebar }) => {
         { label: 'Reporte de Mantenimientos', tab: 'mantenimientos', icon: Wrench },
         { label: 'Reporte de Préstamos', tab: 'prestamos', icon: Share2 },
         { label: 'Estadísticas del Colegio', tab: 'estadisticas', icon: BarChart3 },
+      ]
+    },
+    { 
+      label: 'Notificaciones', 
+      path: '/notificaciones', 
+      icon: Bell,
+      badge: 'Alertas',
+      defaultTab: 'todas',
+      submodules: [
+        { label: 'Todas las Alertas', tab: 'todas', icon: Bell },
+        { label: 'Alertas Críticas', tab: 'urgentes', icon: AlertTriangle },
+        { label: 'Mantenimientos', tab: 'mantenimiento', icon: Wrench },
+        { label: 'Préstamos y Retornos', tab: 'prestamo', icon: Share2 },
+        { label: 'Publicar Aviso', tab: 'nueva', icon: Megaphone },
       ]
     },
     { 

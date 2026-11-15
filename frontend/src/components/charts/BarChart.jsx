@@ -16,8 +16,12 @@ import React, { useState } from 'react';
 
 export const BarChart = ({ data = [] }) => {
   const [hovered, setHovered] = useState(null);
-  const maxVal = 80;
-  const ySteps = [80, 70, 60, 50, 40, 30, 20, 10, 0];
+  
+  const cantidades = data.map(d => d.cantidad || 0);
+  const maxCantidad = cantidades.length > 0 ? Math.max(...cantidades) : 10;
+  const step = Math.max(Math.ceil(maxCantidad / 5), 1);
+  const maxVal = Math.max(step * 5, 5);
+  const ySteps = [maxVal, step * 4, step * 3, step * 2, step * 1, 0];
 
   return (
     <div className="relative pt-4 pb-2">
